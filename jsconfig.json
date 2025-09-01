@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "ESNext",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"] // 修正路径别名（原来的 ".src/*" 少了一个斜杠，可能导致路径解析问题）
+    }
+  },
+  "include": [
+    "src/**/*.js", 
+    "src/**/*.vue", 
+    "src/**/*.json"
+  ], // 只扫描 src 下的有效文件类型
+  "exclude": [
+    "node_modules", 
+    "dist", 
+    "src/views/ItemView.vue" // 显式排除已删除的文件
+  ]
+}
