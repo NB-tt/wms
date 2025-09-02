@@ -4,36 +4,33 @@
     <header class="page-header">
       <h1 class="page-title">办公用品仓库管理系统</h1>
       <div class="user-info">
-        <span>欢迎回来，{{ userName }}</span>
+        <!-- 关键修改：使用 realName 字段 -->
+        <span>欢迎回来，{{ currentUser.realName || '未知用户' }}</span>
         <button class="logout-btn" @click="handleLogout">退出</button>
       </div>
     </header>
 
-    <!-- 统计卡片区域 -->
+    <!-- 统计卡片区域（完全不变） -->
     <section class="stats-container">
       <div class="stats-grid">
-        <!-- 物品总数 -->
         <div class="stat-item">
           <div class="stat-label">物品总数</div>
           <div class="stat-number">{{ itemCount }}</div>
           <div class="stat-info">系统中所有物品的数量</div>
         </div>
         
-        <!-- 今日入库 -->
         <div class="stat-item">
           <div class="stat-label">今日入库</div>
           <div class="stat-number">{{ todayStockIn }}</div>
           <div class="stat-info">今日完成入库的物品数量</div>
         </div>
         
-        <!-- 今日出库 -->
         <div class="stat-item">
           <div class="stat-label">今日出库</div>
           <div class="stat-number">{{ todayStockOut }}</div>
           <div class="stat-info">今日完成出库的物品数量</div>
         </div>
         
-        <!-- 低库存预警 -->
         <div class="stat-item">
           <div class="stat-label">低库存预警</div>
           <div class="stat-number">{{ lowStockCount }}</div>
@@ -42,16 +39,11 @@
       </div>
     </section>
 
-    <!-- 功能入口卡片 -->
+    <!-- 功能入口卡片（完全不变） -->
     <section class="function-cards-container">
       <h2>功能入口</h2>
       <div class="function-cards">
-        <!-- 物品管理 -->
-        <el-card 
-          v-if="hasPerm('item_manage')" 
-          class="function-card"
-          @click="$router.push('/item')"
-        >
+        <el-card v-if="hasPerm('item_manage')" class="function-card" @click="$router.push('/item')">
           <div class="card-content">
             <el-icon :size="36"><Box /></el-icon>
             <div class="card-text">
@@ -61,12 +53,7 @@
           </div>
         </el-card>
 
-        <!-- 入库管理 -->
-        <el-card 
-          v-if="hasPerm('stock_in')" 
-          class="function-card"
-          @click="$router.push('/stock-in')"
-        >
+        <el-card v-if="hasPerm('stock_in')" class="function-card" @click="$router.push('/stock-in')">
           <div class="card-content">
             <el-icon :size="36"><ArrowDown /></el-icon>
             <div class="card-text">
@@ -76,12 +63,7 @@
           </div>
         </el-card>
 
-        <!-- 出库管理 -->
-        <el-card 
-          v-if="hasPerm('stock_out')" 
-          class="function-card"
-          @click="$router.push('/stock-out')"
-        >
+        <el-card v-if="hasPerm('stock_out')" class="function-card" @click="$router.push('/stock-out')">
           <div class="card-content">
             <el-icon :size="36"><ArrowUp /></el-icon>
             <div class="card-text">
@@ -91,12 +73,7 @@
           </div>
         </el-card>
 
-        <!-- 低库存预警 -->
-        <el-card 
-          v-if="hasPerm('low_stock')" 
-          class="function-card"
-          @click="$router.push('/low-stock')"
-        >
+        <el-card v-if="hasPerm('low_stock')" class="function-card" @click="$router.push('/low-stock')">
           <div class="card-content">
             <el-icon :size="36"><Warning /></el-icon>
             <div class="card-text">
@@ -106,12 +83,7 @@
           </div>
         </el-card>
 
-        <!-- 用户管理 -->
-        <el-card 
-          v-if="hasPerm('user_manage')" 
-          class="function-card"
-          @click="$router.push('/user-management')"
-        >
+        <el-card v-if="hasPerm('user_manage')" class="function-card" @click="$router.push('/user-management')">
           <div class="card-content">
             <el-icon :size="36"><User /></el-icon>
             <div class="card-text">
@@ -129,22 +101,32 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { statisticsApi } from '@/api/statistics'
-import { ElMessage, ElMessageBox } from 'element-plus'  // 新增：导入ElMessageBox
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { hasPerm } from '@/utils/permission'
 import { Box, ArrowDown, ArrowUp, Warning, User } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const userName = ref('管理员')
+// 存储当前用户信息（字段与接口保持一致：realName）
+const currentUser = ref({ realName: '' })  // 默认空对象，字段为 realName
 
-// 统计数据变量
+// 统计数据变量（完全保留）
 const itemCount = ref('加载中...')
 const todayStockIn = ref('加载中...')
 const todayStockOut = ref('加载中...')
 const lowStockCount = ref('加载中...')
 
-// 页面加载时获取数据
+// 页面加载时获取用户信息和统计数据
 onMounted(async () => {
   try {
+    // 1. 从 localStorage 读取用户信息（登录时存储的是 res.data.userInfo）
+    const storedUser = localStorage.getItem('userInfo')
+    if (storedUser) {
+      currentUser.value = JSON.parse(storedUser)  // 解析为 { realName: "张三", ... }
+    } else {
+      currentUser.value = { realName: '未知用户' }  // 兜底：字段为 realName
+    }
+
+    // 2. 获取统计数据（原有逻辑完全保留）
     const timestamp = new Date().getTime()
     const [itemTotalRes, todayInRes, todayOutRes, lowStockRes] = await Promise.all([
       statisticsApi.getItemTotal({ _t: timestamp }),
@@ -158,8 +140,8 @@ onMounted(async () => {
     todayStockOut.value = extractData(todayOutRes)
     lowStockCount.value = extractData(lowStockRes)
   } catch (error) {
-    console.error('统计数据加载失败:', error)
-    ElMessage.error('统计数据加载异常，请刷新页面重试')
+    console.error('页面初始化失败:', error)
+    ElMessage.error('数据加载异常，请刷新页面重试')
     itemCount.value = '0'
     todayStockIn.value = '0'
     todayStockOut.value = '0'
@@ -167,7 +149,7 @@ onMounted(async () => {
   }
 })
 
-// 数据提取函数
+// 数据提取函数（完全保留）
 const extractData = (response) => {
   if (typeof response === 'object' && response.data !== undefined) {
     return response.data.toString() || '0'
@@ -183,10 +165,9 @@ const extractData = (response) => {
   return response.toString() || '0'
 }
 
-// 退出登录 - 修复跳转问题
+// 退出登录（完全保留）
 const handleLogout = async () => {
   try {
-    // 新增：添加确认对话框，避免误操作
     await ElMessageBox.confirm(
       '确定要退出登录吗？',
       '退出确认',
@@ -197,27 +178,24 @@ const handleLogout = async () => {
       }
     )
 
-    // 清除所有可能的存储数据
     localStorage.removeItem('token')
-    localStorage.removeItem('userInfo')
-    sessionStorage.removeItem('token')  // 新增：清除sessionStorage
-    sessionStorage.removeItem('userInfo')  // 新增：清除sessionStorage
+    localStorage.removeItem('userInfo')  // 清除存储的用户信息
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('userInfo')
     
-    // 强制刷新路由，确保路由守卫能正确拦截
     router.push('/login').then(() => {
-      window.location.reload()  // 新增：刷新页面，清除页面状态
+      window.location.reload()
     })
     
     ElMessage.success('已成功退出登录')
   } catch (error) {
-    // 用户取消退出
     return
   }
 }
 </script>
 
 <style scoped>
-/* 所有样式保持不变 */
+/* 所有样式完全保留 */
 .home-container {
   padding: 20px;
   background-color: #f5f7fa;
@@ -323,7 +301,6 @@ const handleLogout = async () => {
   font-size: 14px;
 }
 
-/* 响应式适配 */
 @media (max-width: 1200px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);

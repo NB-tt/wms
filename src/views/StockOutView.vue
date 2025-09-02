@@ -1,5 +1,18 @@
 <template>
   <div class="stock-out-container">
+    <!-- 新增：返回首页按钮（左上角） -->
+    <div class="back-home-container">
+      <el-button 
+        type="default" 
+        icon="ArrowLeft" 
+        @click="goToHome" 
+        class="back-home-btn"
+        style="margin-bottom: 20px;"
+      >
+        返回首页
+      </el-button>
+    </div>
+
     <el-card class="main-card">
       <template #header><h2>物品出库管理</h2></template>
       <el-form
@@ -8,7 +21,7 @@
         :rules="rules"
         label-width="120px"
       >
-        <!-- 物品名称下拉列表（修复加载和验证） -->
+        <!-- 物品名称下拉列表 -->
         <el-form-item label="物品名称" prop="itemId">
           <el-select 
             v-model="form.itemId" 
@@ -26,7 +39,7 @@
           </el-select>
         </el-form-item>
 
-        <!-- 出库数量（默认1，允许手动修改） -->
+        <!-- 出库数量 -->
         <el-form-item label="出库数量" prop="outQuantity">
           <el-input 
             v-model.number="form.outQuantity" 
@@ -36,7 +49,7 @@
           />
         </el-form-item>
 
-        <!-- 申请人ID（默认空） -->
+        <!-- 申请人ID -->
         <el-form-item label="申请人ID" prop="applyId">
           <el-input 
             v-model="form.applyId"  
@@ -44,7 +57,7 @@
           />
         </el-form-item>
 
-        <!-- 审批人ID（默认空） -->
+        <!-- 审批人ID -->
         <el-form-item label="审批人ID" prop="approveId">
           <el-input 
             v-model="form.approveId" 
@@ -52,7 +65,7 @@
           />
         </el-form-item>
 
-        <!-- 领用用途（默认空） -->
+        <!-- 领用用途 -->
         <el-form-item label="领用用途" prop="purpose">
           <el-input 
             v-model="form.purpose" 
@@ -60,7 +73,7 @@
           />
         </el-form-item>
 
-        <!-- 经办人ID（默认空） -->
+        <!-- 经办人ID -->
         <el-form-item label="经办人ID" prop="handlerId">
           <el-input 
             v-model="form.handlerId" 
@@ -68,7 +81,7 @@
           />
         </el-form-item>
 
-        <!-- 出库时间（默认空） -->
+        <!-- 出库时间 -->
         <el-form-item label="出库时间" prop="outTime">
           <el-date-picker 
             v-model="form.outTime" 
@@ -100,10 +113,10 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'  
 import { ElMessage } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'  // 新增：导入返回图标
 import { useRouter } from 'vue-router' 
 import { stockOutApi } from '@/api/stockOut'
 import { hasPerm } from '@/utils/permission'
-// 注释：不引入userStore，避免默认填充用户ID
 
 const router = useRouter()
 const stockOutFormRef = ref(null)
@@ -115,15 +128,15 @@ const itemListLoading = ref(true)
 // 表单数据：默认全空
 const form = reactive({
   itemId: null,           // 物品ID（默认空）
-  outQuantity: null,      // 出库数量（默认空，原默认1）
-  applyId: '',            // 申请人ID（默认空字符串，避免number类型警告）
+  outQuantity: null,      // 出库数量（默认空）
+  applyId: '',            // 申请人ID（默认空字符串）
   approveId: '',          // 审批人ID（默认空字符串）
   purpose: '',            // 领用用途（默认空）
   handlerId: '',          // 经办人ID（默认空字符串）
   outTime: null           // 出库时间（默认空）
 })
 
-// 表单校验规则：仅校验必填，不强制前端数字类型（后端最终校验）
+// 表单校验规则
 const rules = {
   itemId: [
     { required: true, message: '请选择物品', trigger: 'change' }
@@ -134,7 +147,6 @@ const rules = {
   ],
   applyId: [
     { required: true, message: '请输入申请人ID', trigger: 'blur' }
-    // 注释：移除前端数字类型校验，由后端处理
   ],
   approveId: [
     { required: true, message: '请输入审批人ID', trigger: 'blur' }
@@ -157,7 +169,6 @@ onMounted(async () => {
     itemListLoading.value = true
     const res = await stockOutApi.getItems()
     
-    // 确保接口返回格式正确（假设后端返回 {code:200, data: [{itemId: 1, name: '物品1'}, ...]}）
     if (res?.code === 200 && Array.isArray(res.data)) {
       itemList.value = res.data
     } else {
@@ -175,10 +186,8 @@ onMounted(async () => {
 // 提交出库单
 const handleSubmit = async () => {
   try {
-    // 前端表单校验
     await stockOutFormRef.value.validate()
 
-    // 提交前转换为数字类型
     const submitData = {
       ...form,
       itemId: Number(form.itemId),
@@ -188,7 +197,6 @@ const handleSubmit = async () => {
       handlerId: Number(form.handlerId)
     }
 
-    // 调用提交接口
     const res = await stockOutApi.submitStockOut(submitData)
     
     if (res.code === 200) {
@@ -198,17 +206,15 @@ const handleSubmit = async () => {
       ElMessage.error(res.msg || '提交失败')
     }
   } catch (error) {
-    // 前端校验失败（必填项未填）
     if (error.name !== 'Error') {
       ElMessage.error('请完成所有必填项')
     } else {
-      // 后端返回错误
       ElMessage.error(`提交失败：${error.response?.data?.msg || '服务器错误'}`)
     }
   }
 }
 
-// 重置表单（全空）
+// 重置表单
 const resetForm = () => {
   stockOutFormRef.value?.resetFields()
   Object.keys(form).forEach(key => {
@@ -220,10 +226,23 @@ const resetForm = () => {
 const goToStockOutRecords = () => {
   router.push({ name: 'StockOutRecords' })
 }
+
+// 新增：返回首页方法
+const goToHome = () => {
+  router.push('/home')  // 跳转到首页路由（请根据实际路由调整）
+}
 </script>
 
 <style scoped>
+/* 新增：返回按钮样式 */
+.back-home-container {
+  margin-bottom: 15px;
+}
+.back-home-btn {
+  background-color: #f5f7fa;
+}
 
+/* 原有样式完全保留 */
 .stock-out-container { padding: 20px; background: #fff; min-height: calc(100vh - 60px); }
 .main-card { box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
 .el-form { margin-top: 20px; }

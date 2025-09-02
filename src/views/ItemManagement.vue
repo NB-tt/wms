@@ -1,27 +1,39 @@
 <template>
   <div class="item-management-container">
-    <!-- 头部与搜索 -->
+    <!-- 头部区域（新增返回按钮 + 优化布局） -->
     <div class="page-header">
-      <h2>物品管理</h2>
-      <el-button type="primary" @click="handleAdd">
+      <div class="header-left">
+        <el-button 
+          type="default" 
+          icon="ArrowLeft" 
+          @click="handleBack" 
+          class="back-button"
+        >
+          返回首页
+        </el-button>
+        <h2 class="page-title">物品管理</h2>
+      </div>
+      <el-button type="primary" @click="handleAdd" class="add-button">
         <el-icon><Plus /></el-icon> 新增物品
       </el-button>
     </div>
 
+    <!-- 搜索区域（美化输入框样式） -->
     <el-card class="search-card">
       <el-input
         v-model="searchKeyword"
         placeholder="输入名称/规格搜索"
         clearable
         @keyup.enter="loadItemList"
+        class="search-input"
       >
         <template #append>
-          <el-button type="primary" @click="loadItemList">搜索</el-button>
+          <el-button type="primary" @click="loadItemList" class="search-btn">搜索</el-button>
         </template>
       </el-input>
     </el-card>
 
-    <!-- 物品列表 -->
+    <!-- 表格区域（优化样式和交互） -->
     <el-card class="table-card">
       <el-table 
         :data="itemList" 
@@ -29,6 +41,8 @@
         stripe 
         v-loading="loading"
         :empty-text="loading ? '加载中...' : '暂无数据'"
+        :cell-style="{ 'font-size': '14px' }"
+        :header-cell-style="{ 'font-weight': 'bold', 'background-color': '#f5f7fa' }"
       >
         <el-table-column prop="itemId" label="ID" width="80" align="center" />
         <el-table-column prop="name" label="名称" width="180" />
@@ -51,7 +65,7 @@
           label="库存" 
           width="100" 
           align="center" 
-          :cell-style="(row) => row.row.stockQuantity <= row.row.minStock && { color: 'red' }" 
+          :cell-style="(row) => row.row.stockQuantity <= row.row.minStock && { color: 'red', 'font-weight': 'bold' }" 
         />
         <el-table-column 
           prop="minStock" 
@@ -68,13 +82,20 @@
         <el-table-column prop="location" label="位置" width="150" />
         <el-table-column label="操作" width="180" align="center">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(scope.row.itemId)" style="margin-left: 5px">删除</el-button>
+            <el-button type="primary" size="small" @click="handleEdit(scope.row)" class="edit-btn">编辑</el-button>
+            <el-button 
+              type="danger" 
+              size="small" 
+              @click="handleDelete(scope.row.itemId)" 
+              class="delete-btn"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <!-- 分页 -->
+      <!-- 分页区域（美化样式） -->
       <div class="pagination" v-if="total > 0">
         <el-pagination
           @size-change="handleSizeChange"
@@ -84,11 +105,12 @@
           :page-size="pageSize"
           layout="total, sizes, prev, pager, next, jumper"
           :total="total"
+          class="pagination-component"
         />
       </div>
     </el-card>
 
-    <!-- 新增/编辑弹窗 -->
+    <!-- 新增/编辑弹窗（保持原有逻辑） -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
       <el-form ref="itemForm" :model="form" :rules="formRules" label-width="120px">
         <el-form-item label="名称" prop="name">
@@ -138,7 +160,7 @@
 <script setup>
 import { ref, reactive, onMounted, getCurrentInstance } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, ArrowLeft } from '@element-plus/icons-vue'  // 导入返回图标
 import request from '@/utils/request'
 
 // 组件实例（用于访问ref）
@@ -147,10 +169,10 @@ const { proxy } = getCurrentInstance()
 // 表格数据与分页
 const itemList = ref([])
 const total = ref(0)
-const pageNum = ref(1)  // 初始页码设为1（修复pageNum=18的问题）
+const pageNum = ref(1)
 const pageSize = ref(10)
 const searchKeyword = ref('')
-const loading = ref(false)  // 表格加载状态
+const loading = ref(false)
 
 // 弹窗相关
 const dialogVisible = ref(false)
@@ -186,31 +208,36 @@ const formRules = reactive({
   location: [{ required: true, message: '位置不能为空', trigger: 'blur' }]
 })
 
-// 页面初始化：加载所有必要数据
+// 页面初始化
 onMounted(async () => {
   await Promise.all([
-    loadItemList(),    // 加载物品列表
-    loadItemTypes(),   // 加载分类列表
-    loadSuppliers()    // 加载供应商列表
+    loadItemList(),
+    loadItemTypes(),
+    loadSuppliers()
   ])
 })
 
 /**
- * 加载物品列表（修复路径：无/api前缀）
+ * 返回首页（新增方法）
+ */
+const handleBack = () => {
+  window.location.href = '/home'  // 跳转到首页路由，根据实际路由调整
+  // 如果是SPA应用，使用路由跳转：this.$router.push('/home')
+}
+
+/**
+ * 加载物品列表
  */
 const loadItemList = async () => {
   loading.value = true
   try {
-    // 请求路径：'/items'（无/api前缀）
     const res = await request.get('/items', {
       params: {
-        pageNum: pageNum.value,  // 页码从1开始
+        pageNum: pageNum.value,
         pageSize: pageSize.value,
         keyword: searchKeyword.value
       }
     })
-
-    // 直接使用res（后端返回的分页对象：{ total: 100, records: [...] }）
     itemList.value = res.data.records || []
     total.value = res.data.total || 0
   } catch (e) {
@@ -223,13 +250,12 @@ const loadItemList = async () => {
 }
 
 /**
- * 加载分类列表（修复路径：无/api前缀）
+ * 加载分类列表
  */
 const loadItemTypes = async () => {
   try {
-    // 请求路径：'/item-types'（无/api前缀）
     const res = await request.get('/item-types')
-    itemTypeList.value = res.data || []  // 后端直接返回分类数组
+    itemTypeList.value = res.data || []
   } catch (e) {
     ElMessage.error(`加载分类失败：${e.message}`)
   }
@@ -240,9 +266,8 @@ const loadItemTypes = async () => {
  */
 const loadSuppliers = async () => {
   try {
-    // 请求路径：'/suppliers'（无/api前缀）
     const res = await request.get('/suppliers')
-    supplierList.value = res.data || []  // 后端直接返回供应商数组
+    supplierList.value = res.data || []
   } catch (e) {
     ElMessage.error(`加载供应商失败：${e.message}`)
   }
@@ -266,17 +291,13 @@ const formatSupplier = (row) => {
 }
 
 /**
- * 分页：每页条数变化
+ * 分页事件
  */
 const handleSizeChange = (val) => {
   pageSize.value = val
-  pageNum.value = 1  // 切换每页大小时回到第1页
+  pageNum.value = 1
   loadItemList()
 }
-
-/**
- * 分页：当前页码变化
- */
 const handleCurrentChange = (val) => {
   pageNum.value = val
   loadItemList()
@@ -288,14 +309,8 @@ const handleCurrentChange = (val) => {
 const handleAdd = () => {
   dialogTitle.value = '新增物品'
   form.value = { 
-    itemId: null, 
-    name: '', 
-    specification: '', 
-    typeId: null, 
-    unitPrice: 0, 
-    minStock: 0, 
-    supplierId: null, 
-    location: '' 
+    itemId: null, name: '', specification: '', typeId: null, 
+    unitPrice: 0, minStock: 0, supplierId: null, location: '' 
   }
   dialogVisible.value = true
   setTimeout(() => proxy.$refs.itemForm?.clearValidate(), 0)
@@ -306,31 +321,28 @@ const handleAdd = () => {
  */
 const handleEdit = (row) => {
   dialogTitle.value = '编辑物品'
-  form.value = { ...row }  // 深拷贝行数据
+  form.value = { ...row }
   dialogVisible.value = true
   setTimeout(() => proxy.$refs.itemForm?.clearValidate(), 0)
 }
 
 /**
- * 提交表单（新增/编辑）
+ * 提交表单
  */
 const handleSubmit = async () => {
-  // 表单校验
   const valid = await proxy.$refs.itemForm.validate()
   if (!valid) return
 
   try {
     if (!form.value.itemId) {
-      // 新增：
       await request.post('/items', form.value)
       ElMessage.success('新增成功')
     } else {
-      // 编辑：
       await request.put('/items', form.value)
       ElMessage.success('修改成功')
     }
     dialogVisible.value = false
-    loadItemList()  // 刷新列表
+    loadItemList()
   } catch (e) {
     ElMessage.error(`操作失败：${e.message}`)
   }
@@ -344,10 +356,9 @@ const handleDelete = async (id) => {
     await ElMessageBox.confirm('确定删除该物品？删除后不可恢复', '确认删除', {
       type: 'warning'
     })
-    // 删除：
     await request.delete(`/items/${id}`)
     ElMessage.success('删除成功')
-    loadItemList()  // 刷新列表
+    loadItemList()
   } catch (e) {
     if (e !== 'cancel') ElMessage.error(`删除失败：${e.message}`)
   }
@@ -355,26 +366,101 @@ const handleDelete = async (id) => {
 </script>
 
 <style scoped>
+/* 全局容器样式 */
 .item-management-container { 
   padding: 20px; 
   background: #f5f7fa; 
   min-height: calc(100vh - 60px); 
 }
+
+/* 头部样式（含返回按钮） */
 .page-header { 
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
-  margin-bottom: 20px; 
+  margin-bottom: 24px; 
+  padding-bottom: 12px; 
+  border-bottom: 1px solid #eee; 
 }
+.header-left { 
+  display: flex; 
+  align-items: center; 
+  gap: 16px; 
+}
+.back-button { 
+  background-color: #f0f2f5; 
+  color: #409eff; 
+  border: none; 
+  padding: 6px 12px; 
+}
+.back-button:hover { 
+  background-color: #e6f4ff; 
+}
+.page-title { 
+  margin: 0; 
+  color: #1d2129; 
+  font-size: 20px; 
+}
+
+/* 搜索框样式 */
 .search-card { 
   margin-bottom: 20px; 
-  padding: 15px; 
+  padding: 16px; 
+  background: white; 
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
 }
+.search-input { 
+  width: 100%; 
+  max-width: 800px; 
+}
+.search-btn { 
+  min-width: 80px; 
+}
+
+/* 表格样式 */
 .table-card { 
-  padding: 15px; 
+  background: white; 
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+  border-radius: 4px; 
+  overflow: hidden; 
 }
+.el-table { 
+  border-radius: 4px 4px 0 0; 
+}
+.el-table__header th { 
+  background-color: #f5f7fa !important; 
+}
+
+/* 分页样式 */
 .pagination { 
-  margin-top: 15px; 
+  margin-top: 16px; 
   text-align: right; 
+  padding: 12px 16px; 
+  background-color: #f9fafb; 
+  border-top: 1px solid #eee; 
+}
+
+/* 操作按钮样式优化 */
+.edit-btn { 
+  margin-right: 8px; 
+}
+.delete-btn { 
+  background-color: #f56c6c; 
+  border-color: #f56c6c; 
+}
+.delete-btn:hover { 
+  background-color: #f78989; 
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .page-header { 
+    flex-direction: column; 
+    align-items: flex-start; 
+    gap: 12px; 
+  }
+  .add-button { 
+    align-self: flex-end; 
+  }
 }
 </style>

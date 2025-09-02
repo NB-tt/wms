@@ -53,7 +53,7 @@ const routes = [
     meta: { 
       hasToken: true, 
       requiresAuth: true, 
-      targetPerm: 'low_stock_warning'  // 对应权限标识
+      targetPerm: 'low_stock'  // 对应权限标识
     }
   },
   {

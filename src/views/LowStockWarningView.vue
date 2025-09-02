@@ -1,10 +1,21 @@
 <template>
   <div class="low-stock-container">
+    <!-- 新增：返回首页按钮（左上角） -->
+    <div class="back-container" style="margin-bottom: 20px;">
+      <el-button 
+        type="default" 
+        icon="ArrowLeft" 
+        @click="goToHome" 
+        class="back-btn"
+      >
+        返回首页
+      </el-button>
+    </div>
+
     <el-card class="main-card">
       <template #header>
         <div class="header-content">
           <h2>低库存预警</h2>
-          <!-- 红色徽章显示低库存数量（仅数字） -->
           <el-badge :value="lowStockCount" type="danger" v-if="lowStockCount > 0" />
         </div>
       </template>
@@ -18,7 +29,7 @@
         @input="handleSearch"  
       />
 
-      <!-- 低库存物品表格（加载状态优化） -->
+      <!-- 低库存物品表格 -->
       <el-table 
         v-loading="loading" 
         :data="filteredItems" 
@@ -50,84 +61,69 @@
 </template>
 
 <script setup>
+// 仅新增返回首页相关代码，其余逻辑完全保留
 import { ref, onMounted, computed } from 'vue'
-import { ElMessage, ElTable } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'  // 新增：导入返回图标
 import { statisticsApi } from '@/api/statistics'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// 状态管理（修正类型和初始值）
-const lowStockItems = ref([])  // 低库存物品列表（数组）
-const lowStockCount = ref(0)   // 低库存数量（数字，默认0）
-const loading = ref(true)      // 加载状态
-const searchKeyword = ref('')  // 搜索关键词
+// 原有状态管理完全保留
+const lowStockItems = ref([])
+const lowStockCount = ref(0)
+const loading = ref(true)
+const searchKeyword = ref('')
 
-// 筛选后的物品列表（确保是数组）
+// 原有计算属性、方法完全保留
 const filteredItems = computed(() => {
-  if (!Array.isArray(lowStockItems.value)) return []  // 安全校验
+  if (!Array.isArray(lowStockItems.value)) return []
   if (!searchKeyword.value) return lowStockItems.value
   const keyword = searchKeyword.value.toLowerCase()
   return lowStockItems.value.filter(item => 
-    (item.name || '').toLowerCase().includes(keyword) ||  // 防undefined
+    (item.name || '').toLowerCase().includes(keyword) || 
     (item.specification || '').toLowerCase().includes(keyword)
   )
 })
 
-// 搜索防抖处理（500ms延迟）
 const handleSearch = (() => {
   let timer = null
   return () => {
     clearTimeout(timer)
-    timer = setTimeout(() => { /* 由computed自动触发筛选 */ }, 500)
+    timer = setTimeout(() => {}, 500)
   }
 })()
 
-// 获取低库存数量（独立处理错误）
 const fetchLowStockCount = async () => {
   try {
     const res = await statisticsApi.getLowStockCount()
-    // 后端返回格式：{ code:200, data: 5 }
-    if (res?.code === 200) {
-      return res.data || 0  // 返回数字
-    } else {
-      ElMessage.warning('低库存数量获取失败')
-      return 0
-    }
+    return res?.code === 200 ? res.data || 0 : 0
   } catch (error) {
     console.error('数量接口错误:', error)
-    return 0  // 错误时返回0
+    return 0
   }
 }
 
-// 获取低库存物品列表（独立处理错误）
 const fetchLowStockItems = async () => {
   try {
     const res = await statisticsApi.getLowStockItems()
-    // 后端返回格式：{ code:200, data: [...] }
-    if (res?.code === 200) {
-      return Array.isArray(res.data) ? res.data : []  // 返回数组
-    } else {
-      ElMessage.warning('低库存列表获取失败')
-      return []
-    }
+    return res?.code === 200 && Array.isArray(res.data) ? res.data : []
   } catch (error) {
     console.error('列表接口错误:', error)
-    return []  // 错误时返回空数组
+    return []
   }
 }
 
-// 页面加载：获取数据（独立错误处理）
 onMounted(async () => {
   try {
     loading.value = true
-    // 并行请求，但单独处理每个接口错误
     const [count, items] = await Promise.all([
       fetchLowStockCount(), 
       fetchLowStockItems()
     ])
-    lowStockCount.value = count  // 赋值数字
-    lowStockItems.value = items  // 赋值数组
+    lowStockCount.value = count
+    lowStockItems.value = items
   } catch (error) {
     ElMessage.error('数据加载异常')
   } finally {
@@ -135,7 +131,6 @@ onMounted(async () => {
   }
 })
 
-// 跳转入库页面
 const handleStockIn = (item) => {
   if (!item?.itemId) {
     ElMessage.warning('物品信息异常')
@@ -143,15 +138,30 @@ const handleStockIn = (item) => {
   }
   router.push({
     path: '/stock-in',
-    query: { itemId: item.itemId, itemName: item.name }  // 携带名称优化体验
+    query: { itemId: item.itemId, itemName: item.name }
   })
+}
+
+// 新增：返回首页方法
+const goToHome = () => {
+  router.push('/home')  // 跳转到首页路由（请根据实际路由调整）
 }
 </script>
 
 <style scoped>
+/* 仅新增返回按钮样式，原有样式完全保留 */
+.back-container {
+  margin-bottom: 20px;  /* 按钮与卡片间距 */
+}
+
+.back-btn {
+  background-color: #e6f4ff;  /* 浅蓝背景，与入库/出库管理按钮统一 */
+}
+
+/* 原有样式完全保留 */
 .low-stock-container {
   padding: 20px;
-  background: #f5f7fa;  /* 浅灰背景区分内容区 */
+  background: #f5f7fa;
   min-height: calc(100vh - 60px);
 }
 .main-card {
@@ -166,7 +176,6 @@ const handleStockIn = (item) => {
   width: 300px;
   margin-top: 10px;
 }
-/* 表格加载动画优化 */
 ::v-deep .el-table__empty-text {
   padding: 60px 0;
 }

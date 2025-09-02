@@ -86,15 +86,21 @@ const handleLogin = async () => {
 
     // 处理登录响应
     if (res.code === 200 && res.data.token) {
-      // 存储用户信息到Pinia
-      userStore.setUserInfo({
+      // 1. 修复：存储真实名称（接口返回的是 realName，不是 username）
+      const userInfo = {
         userId: res.data.userInfo.userId,
         role: res.data.userInfo.role,
-        realName: res.data.userInfo.username,
+        realName: res.data.userInfo.realName,  // 关键修复：字段是 realName！！！
         token: res.data.token,
-        permissions: []
-      })
-      
+        permissions: res.data.permissions || []  // 存储权限列表（可选）
+      }
+
+      // 2. 存储到 Pinia（原有逻辑保留）
+      userStore.setUserInfo(userInfo)
+
+      // 3. 新增：存储到 localStorage（确保首页能读取）
+      localStorage.setItem('userInfo', JSON.stringify(userInfo))
+
       ElMessage.success('登录成功')
       // 跳转到首页或之前的页面
       const redirectPath = router.currentRoute.value.query.redirect || '/home'
@@ -104,6 +110,7 @@ const handleLogin = async () => {
     }
   } catch (error) {
     console.error('登录请求失败:', error)
+    ElMessage.error('网络异常，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -147,4 +154,3 @@ const handleLogin = async () => {
   width: 100%;
 }
 </style>
-    
