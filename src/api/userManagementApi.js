@@ -5,7 +5,8 @@ export const userApi = {
   list: (params) => request.get('/users/list', { params }),  
   add: (data) => request.post('/users/add', data),          
   update: (data) => request.post('/users/update', data),   
-  delete: (id) => request.delete(`/users/${id}`)  
+  delete: (id) => request.delete(`/users/${id}`),
+  updateStatus: (data) => request.post('/users/update-status', data)  // 用户状态单独更新接口
 }
 
 // 角色管理接口

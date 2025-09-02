@@ -58,7 +58,7 @@
                 </template>
               </el-table-column>
               <el-table-column prop="roleName" label="角色" />
-              <el-table-column label="状态" prop="status">
+              <el-table-column label="状态" >
                 <template #default="scope">
                   <el-switch
                     v-model="scope.row.status"
@@ -668,20 +668,36 @@ const handleSavePerms = async () => {
   }
 }
 
-// 修改用户状态
+// 修改用户状态（已修复！！！）
 const handleStatusChange = async (row) => {
+  // 1. 记录切换前的旧状态（用于请求失败时回滚）
+  const oldStatus = row.status
+  // 2. 计算切换后的新状态（1 启用 → 0 禁用；0 禁用 → 1 启用）
+  const newStatus = oldStatus === 1 ? 0 : 1
+
   try {
-    const updateData = { userId: row.userId, status: row.status }
+    // 3. 传递新状态给后端（修复：使用 newStatus 而非旧状态）
+    const updateData = { 
+      userId: row.userId,  // 用户ID（正确传递）
+      status: newStatus    // 新状态（修复：传递切换后的新值）
+    }
+    // 4. 调用后端接口更新状态
     const res = await userApi.updateStatus(updateData)
-    if (res.code !== 200) {
-      row.status = row.status === 1 ? 0 : 1
-      ElMessage.error(res.msg || '状态更新失败')
-    } else {
+
+    if (res.code === 200) {
+      // ✅ 请求成功：更新前端显示状态为新状态
+      row.status = newStatus
       ElMessage.success('状态更新成功')
+    } else {
+      // ❌ 请求失败：回滚状态为切换前的旧值
+      row.status = oldStatus
+      ElMessage.error(res.msg || '状态更新失败')
     }
   } catch (error) {
-    row.status = row.status === 1 ? 0 : 1
-    ElMessage.error('状态更新失败')
+    // ❌ 网络错误：回滚状态为切换前的旧值
+    row.status = oldStatus
+    console.error('状态更新网络错误:', error)
+    ElMessage.error('网络错误，状态更新失败')
   }
 }
 
