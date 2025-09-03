@@ -8,7 +8,7 @@
     </div>
 
     <h1 class="page-title">物品入库管理</h1>
-    
+
     <el-card class="form-card">
       <el-form
         ref="stockInFormRef"
@@ -62,7 +62,6 @@
   // 脚本内容完全保留（功能逻辑不变）
   import { ref, reactive, onMounted } from 'vue'
   import { ElMessage } from 'element-plus'
-  import { ArrowLeft } from '@element-plus/icons-vue'
   import { stockInApi } from '@/api/stockIn'
   import { useRouter } from 'vue-router'
 
@@ -122,7 +121,7 @@
       await stockInFormRef.value.validate()
       submitLoading.value = true
       const res = await stockInApi.submitStockIn(stockInForm)
-      
+
       if (res.code === 200) {
         ElMessage.success('入库单提交成功！')
         resetForm()

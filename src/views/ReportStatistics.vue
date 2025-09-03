@@ -9,6 +9,11 @@
 
     <h1 class="page-title">报表统计</h1>
 
+    <!-- 柱状图 -->
+    <el-card class="chart-card" style="margin-bottom: 20px;">
+      <div ref="chartRef" style="width: 100%; height: 400px;"></div>
+    </el-card>
+
     <!-- 筛选表单 -->
     <el-card class="form-card">
       <el-form :model="query" label-width="80px" class="report-form">
@@ -83,25 +88,26 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { reportApi } from '@/api/reportApi.js'
 import dayjs from 'dayjs'
-import axios from "axios";
+import axios from "axios"
+import * as echarts from 'echarts'
 
 const router = useRouter()
 
 const query = reactive({
-  type: 'daily',         // 日报/月报/年报
-  date: '',              // 选择的日期
-  reportType: 'in'       // 入库/出库
+  type: 'daily',
+  date: '',
+  reportType: 'in'
 })
 
 const previewData = ref([])
 const loading = ref(false)
 
-// 根据报表类型动态修改日期选择器类型
+// 日期选择器类型
 const datePickerType = computed(() => {
   if (query.type === 'daily') return 'date'
   if (query.type === 'monthly') return 'month'
@@ -109,7 +115,6 @@ const datePickerType = computed(() => {
   return 'date'
 })
 
-// 显示格式
 const dateFormat = computed(() => {
   if (query.type === 'daily') return 'YYYY-MM-DD'
   if (query.type === 'monthly') return 'YYYY-MM'
@@ -117,10 +122,8 @@ const dateFormat = computed(() => {
   return 'YYYY-MM-DD'
 })
 
-// value-format 不用，使用 dayjs 手动格式化
 const valueFormat = undefined
 
-// 格式化日期
 const formatDate = () => {
   if (!query.date) return ''
   if (query.type === 'daily') return dayjs(query.date).format('YYYY-MM-DD')
@@ -129,7 +132,93 @@ const formatDate = () => {
   return query.date
 }
 
-// 发送请求前手动构造参数，确保 reportType 正确
+// ECharts
+const chartRef = ref(null)
+let chartInstance = null
+
+const renderChart = (data) => {
+  if (!chartRef.value) return
+  if (!chartInstance) chartInstance = echarts.init(chartRef.value)
+
+  // ===== 空数据：清空并给出占位 =====
+  if (!data || data.length === 0) {
+    chartInstance.clear()
+    chartInstance.setOption({
+      title: {
+        text: '暂无数据',
+        left: 'center',
+        top: '40%',
+        textStyle: { color: '#999', fontSize: 14, fontWeight: 'normal' }
+      },
+      xAxis: { type: 'category', data: [] },
+      yAxis: { type: 'value' },
+      series: []
+    }, true) // notMerge=true，强制覆盖
+    return
+  }
+
+  // ===== 你的原始逻辑：按名称聚合并着色 =====
+  const items = [...new Set(data.map(d => d.itemName))]
+  const quantities = items.map(item =>
+    data.filter(d => d.itemName === item)
+      .reduce((sum, cur) => sum + (cur.quantity || 0), 0)
+  )
+
+  const colorPalette = [
+    '#4caf50','#f56c6c','#2196f3','#ff9800','#9c27b0','#00bcd4','#ff5722','#607d8b',
+    '#e91e63','#3f51b5','#009688'
+  ]
+  const itemColors = items.map((_, i) => colorPalette[i % colorPalette.length])
+
+  const option = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    xAxis: {
+      type: 'category',
+      data: items,
+      axisLabel: {
+        rotate: 0,
+        fontStyle: 'normal',
+        fontFamily: 'Microsoft YaHei, Arial, sans-serif',
+        fontSize: 14
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        fontStyle: 'normal',
+        fontFamily: 'Microsoft YaHei, Arial, sans-serif',
+        fontSize: 14
+      }
+    },
+    series: [{
+      name: query.reportType === 'in' ? '入库数量' : '出库数量',
+      type: 'bar',
+      data: quantities,
+      itemStyle: {
+        color: (params) => itemColors[params.dataIndex]
+      },
+      label: {
+        show: true,
+        position: 'top',
+        fontStyle: 'normal',
+        fontFamily: 'Microsoft YaHei, Arial, sans-serif',
+        fontSize: 14
+      }
+    }]
+  }
+
+  chartInstance.setOption(option, true) // notMerge=true，防止残留
+}
+
+
+
+
+
+// 监听预览数据更新图表
+watch(previewData, (newVal) => {
+  if (newVal.length > 0) renderChart(newVal)
+})
+
 const fetchPreview = async () => {
   if (!query.date) {
     ElMessage.warning('请选择日期')
@@ -140,21 +229,28 @@ const fetchPreview = async () => {
     const params = {
       type: query.type,
       date: formatDate(),
-      reportType: query.reportType // 这里保证传给后端的是用户选择的值
+      reportType: query.reportType
     }
     console.log('发送给后端的参数:', params)
 
     const res = await reportApi.preview(params)
-    console.log('收到的 JSON 数据:', res)
-    previewData.value = res.data || res || []
+    // 统一成数组
+    const arr = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
+    console.log('收到的 JSON 数据:', arr)
+
+    previewData.value = arr
+    renderChart(arr)              // 关键：这里不管空不空都渲染（空则清空）
     ElMessage.success('预览成功')
   } catch (error) {
     console.error('获取预览失败', error)
+    previewData.value = []
+    renderChart([])               // 失败也清空图表
     ElMessage.error('获取预览失败：' + error.message)
   } finally {
     loading.value = false
   }
 }
+
 
 const exportReport = async () => {
   if (!query.date) {
@@ -178,9 +274,7 @@ const exportReport = async () => {
     const res = await axios.get('/api/report/export', {
       params,
       responseType: 'blob',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: { 'Authorization': `Bearer ${token}` }
     })
 
     const url = window.URL.createObjectURL(new Blob([res.data]))
@@ -199,12 +293,8 @@ const exportReport = async () => {
   }
 }
 
+const goToHome = () => router.push('/home')
 
-const goToHome = () => {
-  router.push('/home')
-}
-
-// 禁止选择未来日期
 const pickerOptions = {
   disabledDate(time) {
     return time.getTime() > Date.now()
@@ -212,25 +302,13 @@ const pickerOptions = {
 }
 </script>
 
-
-
 <style scoped>
-.back-container {
-  margin-bottom: 20px;
-}
-.back-btn {
-  background-color: #e6f4ff;
-}
+.back-container { margin-bottom: 20px; }
+.back-btn { background-color: #e6f4ff; }
 
-.page-title {
-  text-align: left;
-  margin-bottom: 20px;
-  color: #1d2129;
-  font-size: 22px;
-  font-weight: 600;
-}
+.page-title { text-align: left; margin-bottom: 20px; color: #1d2129; font-size: 22px; font-weight: 600; }
 
-.form-card, .table-card {
+.form-card, .table-card, .chart-card {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   background: #fff;
@@ -238,7 +316,5 @@ const pickerOptions = {
   margin-bottom: 20px;
 }
 
-.report-form {
-  width: 100%;
-}
+.report-form { width: 100%; }
 </style>
