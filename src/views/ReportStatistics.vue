@@ -88,6 +88,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { reportApi } from '@/api/reportApi.js'
 import dayjs from 'dayjs'
+import axios from "axios";
 
 const router = useRouter()
 
@@ -160,20 +161,44 @@ const exportReport = async () => {
     ElMessage.warning('请选择日期')
     return
   }
-  try {
-    const params = {
-      type: query.type,
-      date: formatDate(),
-      reportType: query.reportType
-    }
-    console.log('导出参数:', params)
 
-    const res = await reportApi.export(params)
-    ElMessage.success(res.data || '导出成功')
+  const params = {
+    type: query.type,
+    date: formatDate(),
+    reportType: query.reportType
+  }
+
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      ElMessage.warning('未获取到登录信息，请先登录')
+      return
+    }
+
+    const res = await axios.get('/api/report/export', {
+      params,
+      responseType: 'blob',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const link = document.createElement('a')
+    const fileName = `StockReport_${query.reportType}_${query.type}_${formatDate()}.xlsx`
+    link.href = url
+    link.setAttribute('download', fileName)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
   } catch (error) {
+    console.error(error)
     ElMessage.error('导出失败：' + error.message)
   }
 }
+
 
 const goToHome = () => {
   router.push('/home')
