@@ -4,17 +4,17 @@
       <!-- 侧边栏 -->
       <el-aside width="200px" class="aside-container">
         <div class="logo">仓库管理系统</div>
-        <el-menu 
-          default-active="1" 
+        <el-menu
+          default-active="1"
           class="el-menu-vertical-demo"
           @select="handleMenuSelect"
         >
-          <el-menu-item 
-            v-for="menu in filteredMenus" 
+          <el-menu-item
+            v-for="menu in filteredMenus"
             :key="menu.path"
             :index="menu.path"
           >
-            <component :is="menu.icon" class="menu-icon" />
+            <component :is="menu.icon" class="menu-icon"/>
             <span>{{ menu.label }}</span>
           </el-menu-item>
         </el-menu>
@@ -27,7 +27,7 @@
           <div class="user-info">
             <span>{{ userStore.realName || '用户' }}</span>
             <el-dropdown @command="handleDropdownCommand">
-              <el-button icon="User" circle />
+              <el-button icon="User" circle/>
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item command="logout">退出登录</el-dropdown-item>
@@ -39,7 +39,7 @@
 
         <!-- 页面内容 -->
         <el-main class="main-content">
-          <router-view />
+          <router-view/>
         </el-main>
       </el-container>
     </el-container>
@@ -47,29 +47,23 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'  // 导入路径
-import { 
-  Home, 
-  Box, 
-  Warning, 
-  User, 
-  List as ListIcon
-} from '@element-plus/icons-vue'
+import {computed, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {useUserStore} from '@/stores/user' // 导入路径
+import {Box, Home, List as ListIcon, Printer, User, Warning} from '@element-plus/icons-vue'
 
 // 获取用户store
 const userStore = useUserStore()
 const router = useRouter()
-
 // 所有菜单定义
 const allMenus = ref([
-  { path: '/home', label: '首页', icon: Home, perm: 'home' },
-  { path: '/items', label: '物品管理', icon: Box, perm: 'item_management' },
-  { path: '/low-stock', label: '低库存预警', icon: Warning, perm: 'low_stock_warning' },
-  { path: '/user-management', label: '用户管理', icon: User, perm: 'user_management' },
-  { path: '/inbound', label: '入库管理', icon: ListIcon, perm: 'inbound_management' },
-  { path: '/outbound', label: '出库管理', icon: ListIcon, perm: 'outbound_management' }
+  {path: '/home', label: '首页', icon: Home, perm: 'home'},
+  {path: '/items', label: '物品管理', icon: Box, perm: 'item_management'},
+  {path: '/low-stock', label: '低库存预警', icon: Warning, perm: 'low_stock_warning'},
+  {path: '/user-management', label: '用户管理', icon: User, perm: 'user_management'},
+  {path: '/inbound', label: '入库管理', icon: ListIcon, perm: 'inbound_management'},
+  {path: '/outbound', label: '出库管理', icon: ListIcon, perm: 'outbound_management'},
+  {path: '/report-statistics', label: '统计报表', icon: Printer, perm: 'report_statistics'}
 ])
 
 // 根据权限过滤菜单
@@ -152,4 +146,3 @@ const handleDropdownCommand = (command) => {
   height: calc(100vh - 64px);
 }
 </style>
-    

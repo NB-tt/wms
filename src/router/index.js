@@ -50,9 +50,9 @@ const routes = [
     path: '/low-stock',
     name: 'LowStockWarning',
     component: () => import('@/views/LowStockWarningView.vue'),
-    meta: { 
-      hasToken: true, 
-      requiresAuth: true, 
+    meta: {
+      hasToken: true,
+      requiresAuth: true,
       targetPerm: 'low_stock'  // 对应权限标识
     }
   },
@@ -61,6 +61,16 @@ const routes = [
     name: 'UserManagement',
     component: () => import('@/views/UserManagement.vue'),
     meta: { hasToken: true, requiresAuth: true, targetPerm: 'user_manage' }
+  },
+  {
+    path: '/report-statistics',
+    name: 'ReportStatistics',
+    component: () => import('@/views/ReportStatistics.vue'),
+    meta: {
+      hasToken: true,
+      requiresAuth: true,
+      targetPerm: 'report_statistics' // 权限标识，和前端 v-if="hasPerm('report_statistics')" 对应
+    }
   },
   {
     path: '/',

@@ -18,19 +18,19 @@
           <div class="stat-number">{{ itemCount }}</div>
           <div class="stat-info">系统中所有物品的数量</div>
         </div>
-        
+
         <div class="stat-item">
           <div class="stat-label">今日入库</div>
           <div class="stat-number">{{ todayStockIn }}</div>
           <div class="stat-info">今日完成入库的物品数量</div>
         </div>
-        
+
         <div class="stat-item">
           <div class="stat-label">今日出库</div>
           <div class="stat-number">{{ todayStockOut }}</div>
           <div class="stat-info">今日完成出库的物品数量</div>
         </div>
-        
+
         <div class="stat-item">
           <div class="stat-label">低库存预警</div>
           <div class="stat-number">{{ lowStockCount }}</div>
@@ -89,6 +89,16 @@
             <div class="card-text">
               <h3>用户管理</h3>
               <p>管理系统用户、角色和权限</p>
+            </div>
+          </div>
+        </el-card>
+
+        <el-card v-if="hasPerm('report_statistics')" class="function-card" @click="$router.push('/report-statistics')">
+          <div class="card-content">
+            <el-icon :size="36"><Printer /></el-icon>
+            <div class="card-text">
+              <h3>报表统计</h3>
+              <p>导出出入库的报表</p>
             </div>
           </div>
         </el-card>
@@ -182,11 +192,11 @@ const handleLogout = async () => {
     localStorage.removeItem('userInfo')  // 清除存储的用户信息
     sessionStorage.removeItem('token')
     sessionStorage.removeItem('userInfo')
-    
+
     router.push('/login').then(() => {
       window.location.reload()
     })
-    
+
     ElMessage.success('已成功退出登录')
   } catch (error) {
     return
@@ -311,7 +321,7 @@ const handleLogout = async () => {
   .stats-grid, .function-cards {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .page-header {
     flex-direction: column;
     align-items: flex-start;
