@@ -1,17 +1,20 @@
 <template>
+
   <div class="user-management">
+
     <el-card>
+
       <!-- 顶部操作按钮和标签页 -->
       <div class="header-actions">
-        <el-button 
-          type="default" 
-          icon="ArrowLeft" 
+        <el-button
+          type="default"
+          icon="ArrowLeft"
           @click="$router.push('/home')"
           class="back-button"
         >
           返回首页
         </el-button>
-        
+
         <!-- 标签页：用户管理 / 角色管理 -->
         <el-tabs v-model="activeTab" class="tabs-container">
           <el-tab-pane label="用户管理" name="user">
@@ -20,23 +23,23 @@
               <h2>用户管理</h2>
               <el-button type="primary" @click="handleAddUser">新增用户</el-button>
             </div>
-            
+
             <!-- 用户搜索表单 -->
             <el-form :inline="true" :model="searchForm" class="search-form">
               <el-form-item label="用户名">
                 <el-input v-model="searchForm.username" placeholder="请输入用户名" />
               </el-form-item>
               <el-form-item label="角色">
-                <el-select 
-                  v-model="searchForm.roleId" 
+                <el-select
+                  v-model="searchForm.roleId"
                   placeholder="请选择角色"
-                  clearable  
+                  clearable
                 >
-                  <el-option 
-                    v-for="role in roleList" 
-                    :key="role.roleId" 
-                    :label="role.roleName" 
-                    :value="Number(role.roleId)"  
+                  <el-option
+                    v-for="role in roleList"
+                    :key="role.roleId"
+                    :label="role.roleName"
+                    :value="Number(role.roleId)"
                   />
                 </el-select>
               </el-form-item>
@@ -45,7 +48,7 @@
                 <el-button @click="resetSearch">重置</el-button>
               </el-form-item>
             </el-form>
-            
+
             <!-- 用户表格 -->
             <el-table :data="userList" border>
               <el-table-column prop="userId" label="ID" width="80" />
@@ -58,12 +61,12 @@
                 </template>
               </el-table-column>
               <el-table-column prop="roleName" label="角色" />
-              <el-table-column label="状态" >
+              <el-table-column label="状态">
                 <template #default="scope">
                   <el-switch
                     v-model="scope.row.status"
-                    :active-value="1"  
-                    :inactive-value="0"  
+                    :active-value="1"
+                    :inactive-value="0"
                     @change="handleStatusChange(scope.row)"
                   />
                 </template>
@@ -75,7 +78,7 @@
                 </template>
               </el-table-column>
             </el-table>
-            
+
             <!-- 用户分页 -->
             <div class="pagination">
               <el-pagination
@@ -89,14 +92,14 @@
               />
             </div>
           </el-tab-pane>
-          
+
           <el-tab-pane label="角色管理" name="role">
             <!-- 角色管理内容 -->
             <div class="card-header">
               <h2>角色管理</h2>
               <el-button type="success" @click="handleAddRole">新增角色</el-button>
             </div>
-            
+
             <!-- 角色表格（新增，含删除按钮） -->
             <el-table :data="roleList" border>
               <el-table-column prop="roleId" label="角色ID" width="80" />
@@ -115,9 +118,9 @@
                 <template #default="scope">
                   <el-button type="text" @click="handleEditRole(scope.row)">编辑</el-button>
                   <el-button type="text" @click="handleAssignPerms(scope.row)">分配权限</el-button>
-                  <el-button 
-                    type="text" 
-                    danger 
+                  <el-button
+                    type="text"
+                    danger
                     @click="handleDeleteRole(scope.row)"
                     :disabled="scope.row.isSystemRole"
                   >
@@ -130,10 +133,10 @@
         </el-tabs>
       </div>
     </el-card>
-    
+
     <!-- 用户表单对话框 -->
-    <el-dialog 
-      v-model="userDialogVisible" 
+    <el-dialog
+      v-model="userDialogVisible"
       :title="userDialogType === 'add' ? '新增用户' : '编辑用户'"
       :width="500"
     >
@@ -148,38 +151,45 @@
           <el-input v-model="userForm.department" placeholder="请输入所属部门（如：行政部）" />
         </el-form-item>
         <el-form-item label="联系电话" prop="phone">
-          <el-input 
-            v-model="userForm.phone" 
-            placeholder="请输入联系电话（选填，如：13800138000）" 
+          <el-input
+            v-model="userForm.phone"
+            placeholder="请输入联系电话（选填，如：13800138000）"
             maxlength="20"
           />
           <div class="hint-text">提示：联系电话为选填，仅支持数字和“-”</div>
         </el-form-item>
-        <el-form-item 
-          label="密码" 
+
+        <!-- 【修改点1】编辑用户时显示密码框（支持修改密码） -->
+        <el-form-item
+          label="密码"
           prop="password"
-          v-if="userDialogType === 'add'"
+          :rules="userDialogType === 'edit' ? editPasswordRules : userRules.password"
         >
           <el-input v-model="userForm.password" type="password" />
+          <!-- 【修改点2】编辑时添加提示文字 -->
+          <div v-if="userDialogType === 'edit'" class="hint-text">
+            提示：如需修改密码，请输入至少6位新密码；不修改请留空
+          </div>
         </el-form-item>
+
         <el-form-item label="角色" prop="roleId">
-          <el-select 
-            v-model="userForm.roleId" 
+          <el-select
+            v-model="userForm.roleId"
             placeholder="请选择角色"
           >
-            <el-option 
-              v-for="role in roleList" 
-              :key="role.roleId" 
-              :label="role.roleName" 
-              :value="role.roleId" 
+            <el-option
+              v-for="role in roleList"
+              :key="role.roleId"
+              :label="role.roleName"
+              :value="role.roleId"
             />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-switch 
-            v-model="userForm.status" 
-            :active-value="1"  
-            :inactive-value="0"  
+          <el-switch
+            v-model="userForm.status"
+            :active-value="1"
+            :inactive-value="0"
           />
         </el-form-item>
       </el-form>
@@ -188,10 +198,10 @@
         <el-button type="primary" @click="handleUserSubmit">确定</el-button>
       </template>
     </el-dialog>
-    
+
     <!-- 角色表单对话框 -->
-    <el-dialog 
-      v-model="roleDialogVisible" 
+    <el-dialog
+      v-model="roleDialogVisible"
       :title="roleDialogType === 'add' ? '新增角色' : '编辑角色'"
       :width="600"
     >
@@ -221,11 +231,11 @@
         <el-button type="primary" @click="handleRoleSubmit">确定</el-button>
       </template>
     </el-dialog>
-    
+
     <!-- 角色删除确认对话框 -->
-    <el-dialog 
-      v-model="roleDeleteDialogVisible" 
-      title="确认删除角色" 
+    <el-dialog
+      v-model="roleDeleteDialogVisible"
+      title="确认删除角色"
       :width="400"
       :close-on-click-modal="false"
     >
@@ -238,11 +248,11 @@
         <el-button type="primary" danger @click="confirmDeleteRole">确认删除</el-button>
       </template>
     </el-dialog>
-    
+
     <!-- 权限分配对话框 -->
-    <el-dialog 
-      v-model="permDialogVisible" 
-      title="角色权限分配" 
+    <el-dialog
+      v-model="permDialogVisible"
+      title="角色权限分配"
       :width="600"
     >
       <div class="perm-container">
@@ -260,12 +270,13 @@
         <el-button type="primary" @click="handleSavePerms">保存权限</el-button>
       </template>
     </el-dialog>
+
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, reactive, watch } from 'vue'
-import { userApi, roleApi, permissionApi } from '@/api/userManagementApi' 
+import { userApi, roleApi, permissionApi } from '@/api/userManagementApi'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 
@@ -273,46 +284,52 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 const activeTab = ref('user') // 默认显示用户管理
 
 // 搜索表单
-const searchForm = ref({ 
-  username: '', 
-  roleId: null 
+const searchForm = ref({
+  username: '',
+  roleId: null
 })
 
 // 基础数据
-const roleList = ref([]) 
+const roleList = ref([])
 const userList = ref([])
 const pagination = reactive({ currentPage: 1, pageSize: 10, total: 0 })
 
 // 用户表单相关
 const userDialogVisible = ref(false)
 const userDialogType = ref('add')
-const userForm = ref({ 
-  userId: '', 
-  username: '', 
-  realName: '', 
-  department: '', 
-  password: '', 
-  roleId: null, 
+const userForm = ref({
+  userId: '',
+  username: '',
+  realName: '',
+  department: '',
+  password: '',
+  roleId: null,
   status: 1,
-  phone: '' 
-}) 
+  phone: ''
+})
 const userRules = ref({
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
   department: [{ required: true, message: '请输入所属部门', trigger: 'blur' }],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }, 
+    { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码至少6位', trigger: 'blur' }
   ],
   roleId: [{ required: true, message: '请选择角色', trigger: 'change' }],
   phone: [
-    { 
-      pattern: /^[0-9-]{0,20}$/, 
-      message: '请输入有效的联系电话（仅支持数字和“-”）', 
-      trigger: 'blur' 
+    {
+      pattern: /^[0-9-]{0,20}$/,
+      message: '请输入有效的联系电话（仅支持数字和“-”）',
+      trigger: 'blur'
     }
   ]
 })
+
+// 【修改点3】编辑用户的密码规则（可选填，输入时校验长度）
+const editPasswordRules = ref([
+  { min: 6, message: '密码至少6位', trigger: 'blur', required: false }
+])
+
 const userFormRef = ref(null)
 
 // 角色表单相关
@@ -423,7 +440,6 @@ const getPermissionList = async () => {
 const buildPermissionTree = () => {
   const treeData = []
   const parentMap = new Map()
-  
   permissionList.value.forEach(perm => {
     perm.children = []
     parentMap.set(perm.permId, perm)
@@ -431,29 +447,27 @@ const buildPermissionTree = () => {
       treeData.push(perm)
     }
   })
-  
   permissionList.value.forEach(perm => {
     if (perm.parentId !== 0 && perm.parentId) {
       const parent = parentMap.get(perm.parentId)
       if (parent) parent.children.push(perm)
     }
   })
-  
   permissionTree.value = treeData
 }
 
 // 新增用户
 const handleAddUser = () => {
   userDialogType.value = 'add'
-  userForm.value = { 
-    userId: '', 
-    username: '', 
-    realName: '', 
-    department: '', 
-    password: '', 
-    roleId: roleList.value.length > 0 ? roleList.value[0].roleId : null, 
+  userForm.value = {
+    userId: '',
+    username: '',
+    realName: '',
+    department: '',
+    password: '',
+    roleId: roleList.value.length > 0 ? roleList.value[0].roleId : null,
     status: 1,
-    phone: '' 
+    phone: ''
   }
   userDialogVisible.value = true
 }
@@ -461,27 +475,30 @@ const handleAddUser = () => {
 // 编辑用户
 const handleEditUser = (row) => {
   userDialogType.value = 'edit'
-  userForm.value = { 
-    ...row, 
-    password: '', 
+  userForm.value = {
+    ...row,
+    password: '', // 【修改点4】编辑时密码默认空，留空不修改
     roleId: Number(row.roleId)
   }
   userDialogVisible.value = true
 }
 
-// 提交用户表单
+// 【修改点5】提交用户表单（编辑时若密码为空，不传递password字段）
 const handleUserSubmit = async () => {
   if (!userFormRef.value) return
   try {
     await userFormRef.value.validate()
-    const submitData = {
-      ...userForm.value,
-      roleId: Number(userForm.value.roleId),
-      phone: userForm.value.phone.trim() || null
+    // 构造提交数据（编辑时若密码为空，删除password字段）
+    const submitData = { ...userForm.value }
+    if (userDialogType.value === 'edit' && !submitData.password.trim()) {
+      delete submitData.password // 编辑且密码为空 → 不传递password字段
     }
+    // 角色ID转为数字，处理空字符串电话
+    submitData.roleId = Number(submitData.roleId)
+    submitData.phone = submitData.phone.trim() || null
 
-    const res = userDialogType.value === 'add' 
-      ? await userApi.add(submitData) 
+    const res = userDialogType.value === 'add'
+      ? await userApi.add(submitData)
       : await userApi.update(submitData)
 
     if (res.code === 200) {
@@ -507,13 +524,13 @@ const handleAddRole = () => {
   if (rolePermTreeRef.value) rolePermTreeRef.value.setCheckedKeys([])
 }
 
-// 编辑角色（新增）
+// 编辑角色
 const handleEditRole = async (row) => {
   roleDialogType.value = 'edit'
-  roleForm.value = { 
-    roleId: row.roleId, 
-    roleName: row.roleName, 
-    description: row.description 
+  roleForm.value = {
+    roleId: row.roleId,
+    roleName: row.roleName,
+    description: row.description
   }
   // 获取角色已有权限
   roleCheckedPermIds.value = await getRolePermissions(row.roleId)
@@ -553,13 +570,11 @@ const handleRoleSubmit = async () => {
       ElMessage.warning('请至少选择一个权限')
       return
     }
-
     const roleData = {
       roleId: roleDialogType.value === 'edit' ? roleForm.value.roleId : null,
       roleName: roleForm.value.roleName.trim(),
       description: roleForm.value.description.trim()
     }
-
     let roleRes
     if (roleDialogType.value === 'add') {
       // 新增角色
@@ -568,19 +583,16 @@ const handleRoleSubmit = async () => {
       // 编辑角色
       roleRes = await roleApi.update(roleData)
     }
-
     if (roleRes.code !== 200) {
       ElMessage.error(`${roleDialogType.value === 'add' ? '新增' : '编辑'}角色失败: ` + (roleRes.msg || '未知错误'))
       return
     }
-
     // 分配权限（新增和编辑都需要重新分配权限）
     const targetRoleId = roleDialogType.value === 'add' ? roleRes.data.roleId : roleForm.value.roleId
     const permRes = await roleApi.assignPerms({
       roleId: targetRoleId,
       permIds: selectedPermIds.map(id => Number(id))
     })
-
     if (permRes.code === 200) {
       ElMessage.success(`${roleDialogType.value === 'add' ? '新增' : '编辑'}角色及权限成功`)
       roleDialogVisible.value = false
@@ -611,7 +623,6 @@ const confirmDeleteRole = async () => {
       roleDeleteDialogVisible.value = false
       return
     }
-
     const res = await roleApi.delete(currentRoleId.value)
     if (res.code === 200) {
       ElMessage.success('角色删除成功')
@@ -668,22 +679,20 @@ const handleSavePerms = async () => {
   }
 }
 
-// 修改用户状态（已修复！！！）
+// 修改用户状态（已修复）
 const handleStatusChange = async (row) => {
   // 1. 记录切换前的旧状态（用于请求失败时回滚）
   const oldStatus = row.status
   // 2. 计算切换后的新状态（1 启用 → 0 禁用；0 禁用 → 1 启用）
   const newStatus = oldStatus === 1 ? 0 : 1
-
   try {
     // 3. 传递新状态给后端（修复：使用 newStatus 而非旧状态）
-    const updateData = { 
+    const updateData = {
       userId: row.userId,  // 用户ID（正确传递）
       status: newStatus    // 新状态（修复：传递切换后的新值）
     }
     // 4. 调用后端接口更新状态
     const res = await userApi.updateStatus(updateData)
-
     if (res.code === 200) {
       // ✅ 请求成功：更新前端显示状态为新状态
       row.status = newStatus
@@ -704,12 +713,11 @@ const handleStatusChange = async (row) => {
 // 删除用户
 const handleDeleteUser = async (userId) => {
   try {
-    await ElMessageBox.confirm('确定删除该用户吗？', '确认删除', { 
+    await ElMessageBox.confirm('确定删除该用户吗？', '确认删除', {
       type: 'warning',
       confirmButtonText: '删除',
       cancelButtonText: '取消'
     })
-    
     const res = await userApi.delete(userId)
     if (res.code === 200) {
       ElMessage.success('用户删除成功')
@@ -725,22 +733,24 @@ const handleDeleteUser = async (userId) => {
 
 // 重置搜索
 const resetSearch = () => {
-  searchForm.value = { 
-    username: '', 
-    roleId: null 
+  searchForm.value = {
+    username: '',
+    roleId: null
   }
   getUserList()
 }
 
 // 分页事件
-const handleSizeChange = (size) => { 
-  pagination.pageSize = size 
-  getUserList() 
+const handleSizeChange = (size) => {
+  pagination.pageSize = size
+  getUserList()
 }
-const handleCurrentChange = (page) => { 
-  pagination.currentPage = page 
-  getUserList() 
+
+const handleCurrentChange = (page) => {
+  pagination.currentPage = page
+  getUserList()
 }
+
 </script>
 
 <style scoped>
@@ -752,7 +762,7 @@ const handleCurrentChange = (page) => {
 }
 .back-button {
   align-self: flex-start;
-  margin-bottom: 8px;  
+  margin-bottom: 8px;
 }
 .tabs-container {
   width: 100%;
