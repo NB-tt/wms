@@ -102,6 +102,16 @@
             </div>
           </div>
         </el-card>
+
+        <el-card v-if="hasPerm('Stock_taking')" class="function-card" @click="$router.push('/Stock-taking')">
+          <div class="card-content">
+            <el-icon :size="36"><Printer /></el-icon>
+            <div class="card-text">
+              <h3>库存盘点</h3>
+              <p>核算库存</p>
+            </div>
+          </div>
+        </el-card>
       </div>
     </section>
   </div>

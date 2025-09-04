@@ -63,7 +63,8 @@ const allMenus = ref([
   {path: '/user-management', label: '用户管理', icon: User, perm: 'user_management'},
   {path: '/inbound', label: '入库管理', icon: ListIcon, perm: 'inbound_management'},
   {path: '/outbound', label: '出库管理', icon: ListIcon, perm: 'outbound_management'},
-  {path: '/report-statistics', label: '统计报表', icon: Printer, perm: 'report_statistics'}
+  {path: '/report-statistics', label: '统计报表', icon: Printer, perm: 'report_statistics'},
+  {path: '/Stock-taking', label: '库存盘点', icon: Printer, perm: 'Stock_taking'}
 ])
 
 // 根据权限过滤菜单

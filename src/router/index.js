@@ -73,6 +73,16 @@ const routes = [
     }
   },
   {
+    path: '/Stock-taking',
+    name: 'Stocktaking',
+    component: () => import('@/views/Stocktaking.vue'),
+    meta: {
+      hasToken: true,
+      requiresAuth: true,
+      targetPerm: 'Stock_taking' // 权限标识，和前端 v-if="hasPerm('report_statistics')" 对应
+    }
+  },
+  {
     path: '/',
     redirect: '/login'
   },
