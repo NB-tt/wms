@@ -1,23 +1,36 @@
 <template>
-  <div class="stocktaking-page">
+  <div class="stocktaking-container">
+    <!-- 头部区域：返回按钮 + 页面标题 -->
+    <div class="page-header">
+      <el-button
+        type="default"
+        icon="ArrowLeft"
+        @click="handleBack"
+        class="back-button"
+      >
+        返回首页
+      </el-button>
+      <h2 class="page-title">库存盘点（发起人）</h2>
+      <el-button type="primary" @click="showCreateDialog = true">创建任务</el-button>
+    </div>
+
     <!-- 任务列表 -->
     <el-card shadow="hover" class="mb-20">
-      <div class="flex justify-between items-center mb-10">
-        <h2>库存盘点任务</h2>
-        <el-button type="primary" @click="showCreateDialog = true">创建任务</el-button>
-      </div>
-
       <el-table :data="tasks" border style="width: 100%">
         <el-table-column prop="taskId" label="任务ID" width="80" />
         <el-table-column prop="taskName" label="任务名称" />
-        <el-table-column prop="taskStatus" label="状态" :formatter="formatStatus" />
+        <el-table-column prop="taskStatus" label="状态" width="120">
+          <template #default="scope">
+            <el-tag :type="scope.row.taskStatus === 0 ? 'warning' : 'success'">
+              {{ scope.row.taskStatus === 0 ? '进行中' : '已完成' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="startTime" label="开始时间" />
         <el-table-column prop="endTime" label="结束时间" />
-        <el-table-column label="操作" width="260">
+        <el-table-column label="操作" width="150">
           <template #default="scope">
-            <el-button size="small" type="primary" @click="viewDetails(scope.row)">明细</el-button>
-            <el-button size="small" type="success" :disabled="scope.row.taskStatus === 1"
-                       @click="completeTask(scope.row.taskId)">完成任务</el-button>
+            <el-button size="small" type="primary" @click="viewDetails(scope.row.taskId)">明细</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -27,15 +40,15 @@
     <el-dialog v-model="showDetailDialog" title="盘点明细" width="60%">
       <el-table :data="details" border style="width: 100%">
         <el-table-column prop="detailId" label="明细ID" width="80" />
-        <el-table-column prop="itemId" label="物料ID" />
-        <el-table-column prop="bookQuantity" label="账面数量" />
-        <el-table-column prop="actualQuantity" label="实盘数量" />
+        <el-table-column prop="itemName" label="物料名称" />
+        <el-table-column prop="specification" label="规格" />
+        <el-table-column prop="reason" label="备注" />
         <el-table-column prop="createTime" label="创建时间" />
       </el-table>
     </el-dialog>
 
     <!-- 创建任务对话框 -->
-    <el-dialog v-model="showCreateDialog" title="创建盘点任务" width="60%">
+    <el-dialog v-model="showCreateDialog" title="创建盘点任务" width="70%">
       <el-form :model="newTask" label-width="100px">
         <el-form-item label="任务名称">
           <el-input v-model="newTask.task.taskName" placeholder="请输入任务名称" />
@@ -43,21 +56,35 @@
         <el-form-item label="备注">
           <el-input type="textarea" v-model="newTask.task.remark" />
         </el-form-item>
-        <el-divider>盘点明细</el-divider>
+
+        <el-divider>盘点物料</el-divider>
         <el-table :data="newTask.details" border style="width: 100%">
-          <el-table-column prop="itemId" label="物料ID">
+          <el-table-column label="物料">
             <template #default="scope">
-              <el-input v-model="scope.row.itemId" placeholder="输入物料ID" />
+              <el-select
+                v-model="scope.row.itemId"
+                filterable
+                remote
+                clearable
+                placeholder="请选择物料"
+                :remote-method="searchItems"
+                :loading="itemLoading"
+                style="width: 100%"
+                @focus="searchItems('')"
+                @change="handleItemChange(scope.row, $event)"
+              >
+                <el-option
+                  v-for="item in itemOptions"
+                  :key="item.itemId"
+                  :label="item.name + ' (' + item.specification + ')'"
+                  :value="item.itemId"
+                />
+              </el-select>
             </template>
           </el-table-column>
-          <el-table-column prop="bookQuantity" label="账面数量">
+          <el-table-column prop="reason" label="备注">
             <template #default="scope">
-              <el-input v-model="scope.row.bookQuantity" type="number" />
-            </template>
-          </el-table-column>
-          <el-table-column prop="actualQuantity" label="实盘数量">
-            <template #default="scope">
-              <el-input v-model="scope.row.actualQuantity" type="number" />
+              <el-input v-model="scope.row.reason" />
             </template>
           </el-table-column>
           <el-table-column label="操作" width="100">
@@ -66,8 +93,9 @@
             </template>
           </el-table-column>
         </el-table>
+
         <div class="mt-10">
-          <el-button type="primary" @click="addDetail">添加明细</el-button>
+          <el-button type="primary" @click="addDetail">添加物料</el-button>
         </div>
       </el-form>
 
@@ -80,11 +108,11 @@
 </template>
 
 <script>
-import { stocktakingApi } from '@/api/inventoryApi'
+import { stocktakingApi } from '@/api/stocktakingApi'
+import { ElMessage } from 'element-plus'
 
 export default {
-  // eslint-disable-next-line vue/multi-word-component-names
-  name: 'Stocktaking',
+  name: 'StocktakingCreator',
   data() {
     return {
       tasks: [],
@@ -92,45 +120,54 @@ export default {
       showDetailDialog: false,
       showCreateDialog: false,
       newTask: {
-        task: {
-          taskName: '',
-          remark: '',
-          createdBy: 1
-        },
+        task: { taskName: '', remark: '', createdBy: 1 },
         details: []
-      }
+      },
+      itemOptions: [],
+      itemLoading: false
     }
   },
   methods: {
+    handleBack() {
+      this.$router.push('/home')
+    },
     async loadTasks() {
       const res = await stocktakingApi.getTasks()
       this.tasks = res || []
     },
-    async viewDetails(row) {
-      const res = await stocktakingApi.getDetails(row.taskId)
+    async viewDetails(taskId) {
+      const res = await stocktakingApi.getDetails(taskId)
       this.details = res || []
       this.showDetailDialog = true
     },
-    async completeTask(taskId) {
-      await stocktakingApi.completeTask(taskId)
-      this.$message.success('任务已完成并生成库存调整')
-      this.loadTasks()
-    },
     addDetail() {
-      this.newTask.details.push({ itemId: '', bookQuantity: 0, actualQuantity: 0 })
+      this.newTask.details.push({ itemId: null, itemName: '', specification: '', reason: '' })
     },
     removeDetail(index) {
       this.newTask.details.splice(index, 1)
     },
     async submitTask() {
       await stocktakingApi.createTask(this.newTask)
-      this.$message.success('盘点任务创建成功')
+      ElMessage.success('盘点任务创建成功')
       this.showCreateDialog = false
       this.loadTasks()
       this.newTask = { task: { taskName: '', remark: '', createdBy: 1 }, details: [] }
     },
-    formatStatus(row, column, value) {
-      return value === 0 ? '进行中' : '已完成'
+    async searchItems(keyword) {
+      this.itemLoading = true
+      try {
+        const res = await stocktakingApi.searchItems(keyword || '')
+        this.itemOptions = res || []
+      } finally {
+        this.itemLoading = false
+      }
+    },
+    handleItemChange(row, itemId) {
+      const item = this.itemOptions.find(i => i.itemId === itemId)
+      if (item) {
+        row.itemName = item.name
+        row.specification = item.specification
+      }
     }
   },
   mounted() {
@@ -140,19 +177,10 @@ export default {
 </script>
 
 <style scoped>
-.mb-20 {
-  margin-bottom: 20px;
-}
-.mt-10 {
-  margin-top: 10px;
-}
-.flex {
-  display: flex;
-}
-.justify-between {
-  justify-content: space-between;
-}
-.items-center {
-  align-items: center;
-}
+.stocktaking-container { padding: 20px; }
+.page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.back-button { background-color: #f0f2f5; color: #409eff; border: none; }
+.page-title { margin: 0; font-size: 20px; flex-grow: 1; }
+.mb-20 { margin-bottom: 20px; }
+.mt-10 { margin-top: 10px; }
 </style>
