@@ -6,8 +6,8 @@ export const useUserStore = defineStore('user', {
     role: localStorage.getItem('role') || null,
     realName: localStorage.getItem('realName') || '',
     token: localStorage.getItem('token') || null,
-    permissions: localStorage.getItem('permissions') 
-      ? JSON.parse(localStorage.getItem('permissions')) 
+    permissions: localStorage.getItem('permissions')
+      ? JSON.parse(localStorage.getItem('permissions'))
       : []
   }),
   actions: {
@@ -17,22 +17,24 @@ export const useUserStore = defineStore('user', {
       this.realName = userInfo.realName
       this.token = userInfo.token
       this.permissions = userInfo.permissions || []
-
+      
       localStorage.setItem('userId', this.userId)
       localStorage.setItem('role', this.role)
       localStorage.setItem('realName', this.realName)
       localStorage.setItem('token', this.token)
       localStorage.setItem('permissions', JSON.stringify(this.permissions))
     },
+    /**
+     * 判断是否拥有指定权限（支持大小写不敏感匹配）
+     * @param {string} perm - 权限标识
+     * @returns {boolean}
+     */
     hasPermission(perm) {
       if (this.role === 'system_admin') return true
-      return this.permissions.includes(perm)
-    },
-    // 在userStore的actions中添加：
-    hasPermission(perm) {
-      // 修复：支持数组包含判断（处理可能的空格或格式问题）
       if (!perm || !this.permissions.length) return false
-      return this.permissions.some(p => p.trim() === perm.trim())
+      
+      const targetPerm = perm.toLowerCase()
+      return this.permissions.some(p => p.toLowerCase() === targetPerm)
     },
     clearUserInfo() {
       this.userId = null

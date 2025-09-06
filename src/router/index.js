@@ -45,16 +45,11 @@ const routes = [
     component: () => import('@/views/StockOutRecords.vue'),
     meta: { hasToken: true, requiresAuth: true, targetPerm: 'stock_out' }
   },
-  // 低库存预警
   {
     path: '/low-stock',
     name: 'LowStockWarning',
     component: () => import('@/views/LowStockWarningView.vue'),
-    meta: {
-      hasToken: true,
-      requiresAuth: true,
-      targetPerm: 'low_stock'  // 对应权限标识
-    }
+    meta: { hasToken: true, requiresAuth: true, targetPerm: 'low_stock' }
   },
   {
     path: '/user-management',
@@ -66,40 +61,24 @@ const routes = [
     path: '/report-statistics',
     name: 'ReportStatistics',
     component: () => import('@/views/ReportStatistics.vue'),
-    meta: {
-      hasToken: true,
-      requiresAuth: true,
-      targetPerm: 'report_statistics' // 权限标识，和前端 v-if="hasPerm('report_statistics')" 对应
-    }
+    meta: { hasToken: true, requiresAuth: true, targetPerm: 'report_statistics' }
   },
+  // 修正：盘点任务发起人（统一小写权限标识）
   {
-    path: '/Stock-taking',
+    path: '/stock-taking',
     name: 'Stocktaking',
     component: () => import('@/views/Stocktaking.vue'),
-    meta: {
-      hasToken: true,
-      requiresAuth: true,
-      targetPerm: 'Stock_taking' // 权限标识，和前端 v-if="hasPerm('report_statistics')" 对应
-    }
+    meta: { hasToken: true, requiresAuth: true, targetPerm: 'stock_taking' }
   },
+  // 修正：盘点任务执行人（修复名称拼写+统一小写权限标识）
   {
-    path: '/executor-Stocktaking',
-    name: 'executorStocktaking.',
+    path: '/executor-stocktaking',
+    name: 'ExecutorStocktaking',
     component: () => import('@/views/executorStocktaking.vue'),
-    meta: {
-      hasToken: true,
-      requiresAuth: true,
-      targetPerm: 'executor_Stocktaking' // 权限标识，和前端 v-if="hasPerm('report_statistics')" 对应
-    }
+    meta: { hasToken: true, requiresAuth: true, targetPerm: 'executor_stocktaking' }
   },
-  {
-    path: '/',
-    redirect: '/login'
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/login'
-  }
+  { path: '/', redirect: '/login' },
+  { path: '/:pathMatch(.*)*', redirect: '/login' }
 ]
 
 const router = createRouter({
@@ -115,45 +94,27 @@ router.beforeEach((to, from, next) => {
   const hasToken = !!userStore.token
   const { requiresAuth, targetPerm } = to.meta
 
-  console.log('路由守卫调试:', {
-    path: to.path,
-    hasToken,
-    requiresAuth,
-    targetPerm,
-    userRole: userStore.role,
-    userPermissions: userStore.permissions
-  })
-
-  // 1. 不需要认证的页面（如登录页）
   if (!requiresAuth) {
-    if (hasToken && to.path === '/login') {
-      next('/home')  // 已登录用户访问登录页 → 跳首页
-    } else {
-      next()  // 未登录用户正常访问登录页
-    }
+    hasToken && to.path === '/login' ? next('/home') : next()
     return
   }
 
-  // 2. 需要认证但未登录 → 跳登录页
   if (!hasToken) {
     next(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
     return
   }
 
-  // 3. 系统管理员直接放行（无需检查权限）
   if (userStore.role === 'system_admin') {
     next()
     return
   }
 
-  // 4. 非管理员权限检查（核心修复）
   if (targetPerm && !userStore.hasPermission(targetPerm)) {
     ElMessage.error('没有访问权限，请联系管理员')
-    next(false)  // 禁止跳转，留在当前页（首页）
+    next(false)
     return
   }
 
-  // 5. 所有检查通过 → 放行
   next()
 })
 
