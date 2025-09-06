@@ -105,7 +105,7 @@
 
         <el-card v-if="hasPerm('Stock_taking')" class="function-card" @click="$router.push('/Stock-taking')">
           <div class="card-content">
-            <el-icon :size="36"><Printer /></el-icon>
+            <el-icon :size="36"><DocumentAdd /></el-icon>
             <div class="card-text">
               <h3>库存盘点</h3>
               <p>核算库存</p>
@@ -115,7 +115,7 @@
 
         <el-card v-if="hasPerm('executor_Stocktaking')" class="function-card" @click="$router.push('/executor-Stocktaking')">
           <div class="card-content">
-            <el-icon :size="36"><Printer /></el-icon>
+            <el-icon :size="36"><Document /></el-icon>
             <div class="card-text">
               <h3>库存盘点任务</h3>
               <p>执行人执行库存盘点任务</p>
@@ -188,7 +188,7 @@ const extractData = (response) => {
     try {
       const parsed = JSON.parse(response)
       return parsed.data !== undefined ? parsed.data.toString() : response
-    } catch (e) {
+    } catch  {
       return response
     }
   }
@@ -218,7 +218,7 @@ const handleLogout = async () => {
     })
 
     ElMessage.success('已成功退出登录')
-  } catch (error) {
+  } catch  {
     return
   }
 }

@@ -73,7 +73,9 @@
         style="width: 100%"
         empty-text="暂无数据"
       >
-        <el-table-column prop="dateTime" label="日期" width="180"></el-table-column>
+        <el-table-column prop="dateTime" label="日期" width="180">
+          <template #default="scope">{{ formatTime(scope.row.dateTime) }}</template>
+        </el-table-column>
         <el-table-column prop="type" label="类型" width="100"></el-table-column>
         <el-table-column prop="itemName" label="物品名称" width="180"></el-table-column>
         <el-table-column prop="specification" label="规格" width="120"></el-table-column>
@@ -132,6 +134,11 @@ const formatDate = () => {
   return query.date
 }
 
+// 格式化时间，去掉 T
+const formatTime = (timeStr) => {
+  return timeStr ? timeStr.replace('T', ' ') : ''
+}
+
 // ECharts
 const chartRef = ref(null)
 let chartInstance = null
@@ -140,7 +147,6 @@ const renderChart = (data) => {
   if (!chartRef.value) return
   if (!chartInstance) chartInstance = echarts.init(chartRef.value)
 
-  // ===== 空数据：清空并给出占位 =====
   if (!data || data.length === 0) {
     chartInstance.clear()
     chartInstance.setOption({
@@ -153,11 +159,10 @@ const renderChart = (data) => {
       xAxis: { type: 'category', data: [] },
       yAxis: { type: 'value' },
       series: []
-    }, true) // notMerge=true，强制覆盖
+    }, true)
     return
   }
 
-  // ===== 你的原始逻辑：按名称聚合并着色 =====
   const items = [...new Set(data.map(d => d.itemName))]
   const quantities = items.map(item =>
     data.filter(d => d.itemName === item)
@@ -175,48 +180,23 @@ const renderChart = (data) => {
     xAxis: {
       type: 'category',
       data: items,
-      axisLabel: {
-        rotate: 0,
-        fontStyle: 'normal',
-        fontFamily: 'Microsoft YaHei, Arial, sans-serif',
-        fontSize: 14
-      }
+      axisLabel: { fontSize: 14 }
     },
-    yAxis: {
-      type: 'value',
-      axisLabel: {
-        fontStyle: 'normal',
-        fontFamily: 'Microsoft YaHei, Arial, sans-serif',
-        fontSize: 14
-      }
-    },
+    yAxis: { type: 'value', axisLabel: { fontSize: 14 } },
     series: [{
       name: query.reportType === 'in' ? '入库数量' : '出库数量',
       type: 'bar',
       data: quantities,
-      itemStyle: {
-        color: (params) => itemColors[params.dataIndex]
-      },
-      label: {
-        show: true,
-        position: 'top',
-        fontStyle: 'normal',
-        fontFamily: 'Microsoft YaHei, Arial, sans-serif',
-        fontSize: 14
-      }
+      itemStyle: { color: (params) => itemColors[params.dataIndex] },
+      label: { show: true, position: 'top', fontSize: 14 }
     }]
   }
 
-  chartInstance.setOption(option, true) // notMerge=true，防止残留
+  chartInstance.setOption(option, true)
 }
 
-
-
-
-
-// 监听预览数据更新图表
 watch(previewData, (newVal) => {
-  if (newVal.length > 0) renderChart(newVal)
+  renderChart(newVal)
 })
 
 const fetchPreview = async () => {
@@ -234,23 +214,25 @@ const fetchPreview = async () => {
     console.log('发送给后端的参数:', params)
 
     const res = await reportApi.preview(params)
-    // 统一成数组
     const arr = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
-    console.log('收到的 JSON 数据:', arr)
 
-    previewData.value = arr
-    renderChart(arr)              // 关键：这里不管空不空都渲染（空则清空）
+    // 格式化日期时间
+    previewData.value = arr.map(item => ({
+      ...item,
+      dateTime: formatTime(item.dateTime)
+    }))
+
+    renderChart(previewData.value)
     ElMessage.success('预览成功')
   } catch (error) {
     console.error('获取预览失败', error)
     previewData.value = []
-    renderChart([])               // 失败也清空图表
+    renderChart([])
     ElMessage.error('获取预览失败：' + error.message)
   } finally {
     loading.value = false
   }
 }
-
 
 const exportReport = async () => {
   if (!query.date) {
@@ -305,9 +287,7 @@ const pickerOptions = {
 <style scoped>
 .back-container { margin-bottom: 20px; }
 .back-btn { background-color: #e6f4ff; }
-
 .page-title { text-align: left; margin-bottom: 20px; color: #1d2129; font-size: 22px; font-weight: 600; }
-
 .form-card, .table-card, .chart-card {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
@@ -315,6 +295,5 @@ const pickerOptions = {
   padding: 25px;
   margin-bottom: 20px;
 }
-
 .report-form { width: 100%; }
 </style>

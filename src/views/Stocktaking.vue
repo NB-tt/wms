@@ -17,7 +17,6 @@
     <!-- 任务列表 -->
     <el-card shadow="hover" class="mb-20">
       <el-table :data="tasks" border style="width: 100%">
-        <el-table-column prop="taskId" label="任务ID" width="80" />
         <el-table-column prop="taskName" label="任务名称" />
         <el-table-column prop="taskStatus" label="状态" width="120">
           <template #default="scope">
@@ -26,24 +25,38 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="startTime" label="开始时间" />
-        <el-table-column prop="endTime" label="结束时间" />
+        <el-table-column prop="startTime" label="开始时间">
+          <template #default="scope">{{ formatTime(scope.row.startTime) }}</template>
+        </el-table-column>
+        <el-table-column prop="endTime" label="结束时间">
+          <template #default="scope">{{ formatTime(scope.row.endTime) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="150">
           <template #default="scope">
-            <el-button size="small" type="primary" @click="viewDetails(scope.row.taskId)">明细</el-button>
+            <el-button size="small" type="primary" @click="viewDetails(scope.row)">
+              明细
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
     <!-- 明细对话框 -->
-    <el-dialog v-model="showDetailDialog" title="盘点明细" width="60%">
+    <el-dialog v-model="showDetailDialog" title="盘点明细" width="70%">
       <el-table :data="details" border style="width: 100%">
-        <el-table-column prop="detailId" label="明细ID" width="80" />
         <el-table-column prop="itemName" label="物料名称" />
         <el-table-column prop="specification" label="规格" />
+        <el-table-column prop="bookQuantity" label="账面数量" width="120" />
+        <el-table-column label="实际数量" width="120">
+          <template #default="scope">
+            <span v-if="currentTask.taskStatus === 0">任务进行中</span>
+            <span v-else>{{ scope.row.actualQuantity }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="reason" label="备注" />
-        <el-table-column prop="createTime" label="创建时间" />
+        <el-table-column prop="createTime" label="创建时间">
+          <template #default="scope">{{ formatTime(scope.row.createTime) }}</template>
+        </el-table-column>
       </el-table>
     </el-dialog>
 
@@ -119,6 +132,7 @@ export default {
       details: [],
       showDetailDialog: false,
       showCreateDialog: false,
+      currentTask: {}, // 当前查看的任务
       newTask: {
         task: { taskName: '', remark: '', createdBy: 1 },
         details: []
@@ -133,11 +147,19 @@ export default {
     },
     async loadTasks() {
       const res = await stocktakingApi.getTasks()
-      this.tasks = res || []
+      this.tasks = (res || []).map(task => ({
+        ...task,
+        startTime: task.startTime ? task.startTime.replace('T', ' ') : '',
+        endTime: task.endTime ? task.endTime.replace('T', ' ') : ''
+      }))
     },
-    async viewDetails(taskId) {
-      const res = await stocktakingApi.getDetails(taskId)
-      this.details = res || []
+    async viewDetails(task) {
+      this.currentTask = task
+      const res = await stocktakingApi.getDetails(task.taskId)
+      this.details = (res || []).map(d => ({
+        ...d,
+        createTime: d.createTime ? d.createTime.replace('T', ' ') : ''
+      }))
       this.showDetailDialog = true
     },
     addDetail() {
@@ -168,6 +190,9 @@ export default {
         row.itemName = item.name
         row.specification = item.specification
       }
+    },
+    formatTime(timeStr) {
+      return timeStr ? timeStr.replace('T', ' ') : ''
     }
   },
   mounted() {
