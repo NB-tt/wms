@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-// 用户管理接口（保持不变）
+// 用户管理接口
 export const userApi = {
   list: (params) => request.get('/users/list', { params }),  
   add: (data) => request.post('/users/add', data),          
@@ -20,7 +20,7 @@ export const roleApi = {
   delete: (roleId) => request.delete(`/roles/${roleId}`)  // 角色删除接口
 }
 
-// 权限列表接口（保持不变）
+// 权限列表接口
 export const permissionApi = {
   list: () => request.get('/permissions')
 }

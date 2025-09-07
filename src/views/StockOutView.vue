@@ -1,6 +1,6 @@
 <template>
   <div class="stock-out-container">
-    <!-- 新增：返回首页按钮（左上角） -->
+    <!-- 返回首页按钮 -->
     <div class="back-home-container">
       <el-button 
         type="default" 
@@ -113,7 +113,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'  
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'  // 新增：导入返回图标
+import { ArrowLeft } from '@element-plus/icons-vue'  // 导入返回图标
 import { useRouter } from 'vue-router' 
 import { stockOutApi } from '@/api/stockOut'
 import { hasPerm } from '@/utils/permission'
@@ -227,14 +227,14 @@ const goToStockOutRecords = () => {
   router.push({ name: 'StockOutRecords' })
 }
 
-// 新增：返回首页方法
+//返回首页方法
 const goToHome = () => {
-  router.push('/home')  // 跳转到首页路由（请根据实际路由调整）
+  router.push('/home')  // 跳转到首页路由
 }
 </script>
 
 <style scoped>
-/* 新增：返回按钮样式 */
+
 .back-home-container {
   margin-bottom: 15px;
 }
@@ -242,7 +242,7 @@ const goToHome = () => {
   background-color: #f5f7fa;
 }
 
-/* 原有样式完全保留 */
+
 .stock-out-container { padding: 20px; background: #fff; min-height: calc(100vh - 60px); }
 .main-card { box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
 .el-form { margin-top: 20px; }

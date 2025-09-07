@@ -227,7 +227,7 @@ const init = async () => {
     // 1. 加载物品列表（用于显示物品名称）
     const itemRes = await stockOutApi.getItems()
     if (itemRes.code === 200 && Array.isArray(itemRes.data)) {
-      itemList.value = itemRes.data  // 正确提取物品列表（res.data）
+      itemList.value = itemRes.data  // 提取物品列表（res.data）
     } else {
       itemList.value = []
       ElMessage.warning('物品列表加载失败，部分名称可能无法显示')
@@ -300,7 +300,7 @@ const handleStatusChange = () => {
   })
 }
 
-// 提交审批（修复：数据类型转换 + 分组校验）
+// 提交审批（数据类型转换 + 分组校验）
 const handleApproveSubmit = async () => {
   try {
     // 1. 前端表单校验

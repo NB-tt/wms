@@ -16,6 +16,6 @@ export const stocktakingApi = {
   // 搜索物料（远程搜索下拉框）
   searchItems: (keyword) => request.get('/items/search', { params: { keyword } }),
 
-  // 提交盘点明细（新增）
+  // 提交盘点明细
   submitDetail: (detail) => request.post('/stocktaking/submit-detail', detail)
 }

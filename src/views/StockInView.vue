@@ -1,6 +1,6 @@
 <template>
   <div class="stock-in-container">
-    <!-- 保持原有结构：返回首页按钮 + 标题 + 表单卡片 -->
+    <!-- 返回首页按钮 + 标题 + 表单卡片 -->
     <div class="back-container">
       <el-button type="default" icon="ArrowLeft" @click="goToHome" class="back-btn">
         返回首页
@@ -17,7 +17,7 @@
         label-width="120px"
         class="stock-in-form"
       >
-        <!-- 原有表单字段完全保留 -->
+       
         <el-form-item label="物品名称" prop="itemId">
           <el-select v-model="stockInForm.itemId" placeholder="请选择物品" filterable clearable class="w-full">
             <el-option v-for="item in itemList" :key="item.itemId" :label="item.name" :value="item.itemId"></el-option>
@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-  // 脚本内容完全保留（功能逻辑不变）
+
   import { ref, reactive, onMounted } from 'vue'
   import { ElMessage } from 'element-plus'
   import { stockInApi } from '@/api/stockIn'
@@ -152,50 +152,50 @@
 </script>
 
 <style scoped>
-/* 核心修改：参考出库管理的布局样式 */
+
 .stock-in-container {
   padding: 20px;
-  background-color: #f5f7fa;  /* 1. 浅灰背景填充空白 */
-  min-height: calc(100vh - 60px);  /* 2. 容器高度占满屏幕 */
+  background-color: #f5f7fa;  
+  min-height: calc(100vh - 60px);  
 }
 
-/* 返回按钮样式调整 */
+
 .back-container {
   margin-bottom: 20px;
 }
 .back-btn {
-  background-color: #e6f4ff;  /* 3. 按钮浅蓝背景，与出库管理统一 */
+  background-color: #e6f4ff;  
 }
 
-/* 标题样式优化 */
+/* 标题样式 */
 .page-title {
-  text-align: left;  /* 4. 标题左对齐（与出库管理一致） */
-  margin-bottom: 20px;  /* 5. 减小标题下方间距 */
-  color: #1d2129;  /* 6. 标题颜色加深 */
-  font-size: 22px;  /* 7. 标题字体大小调整 */
+  text-align: left; 
+  margin-bottom: 20px; 
+  color: #1d2129;  
+  font-size: 22px;  
   font-weight: 600;
 }
 
-/* 表单卡片样式（参考出库管理的main-card） */
+/* 表单卡片样式 */
 .form-card {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);  /* 8. 增强卡片阴影 */
-  border-radius: 8px;  /* 9. 卡片圆角 */
-  background: #fff;  /* 10. 白色卡片背景，与浅灰容器区分 */
-  padding: 25px;  /* 11. 卡片内边距，避免内容贴边 */
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);  
+  border-radius: 8px; 
+  background: #fff;  
+  padding: 25px;  
 }
 
-/* 表单内部样式优化 */
+/* 表单内部样式 */
 .stock-in-form {
-  width: 100%;  /* 12. 表单占满卡片宽度 */
+  width: 100%;  
   margin-top: 10px;
 }
 
 /* 输入框/下拉框占满宽度 */
 .el-select, .el-input {
-  width: 100% !important;  /* 13. 确保所有输入控件占满列宽 */
+  width: 100% !important;  /*  确保所有输入控件占满列宽 */
 }
 
-/* 原有样式保留（仅调整冲突项） */
+
 .loading-text {
   color: #666;
   margin-left: 10px;
@@ -204,9 +204,9 @@
 
 .form-actions {
   display: flex;
-  justify-content: flex-start;  /* 14. 按钮左对齐（与出库管理一致） */
+  justify-content: flex-start;  
   gap: 15px;
   margin-top: 25px;
-  margin-left: 0;  /* 15. 移除居中margin */
+  margin-left: 0;  
 }
 </style>

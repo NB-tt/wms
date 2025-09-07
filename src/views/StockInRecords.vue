@@ -314,7 +314,7 @@ const handleApproveSubmit = async () => {
     // 1. 前端表单验证（确保用户选择了审批结果，驳回时填写了原因）
     await approveFormRef.value.validate()
 
-    // 2. 构建符合后端DTO要求的提交数据（严格匹配字段类型和规则）
+    // 2. 提交数据
     const submitData = {
       inId: Number(approveForm.inId),          // 入库单ID（转换为数字）
       status: Number(approveForm.status),      // 审批状态（1=通过，2=驳回，转换为数字）

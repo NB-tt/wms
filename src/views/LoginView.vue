@@ -86,19 +86,19 @@ const handleLogin = async () => {
 
     // 处理登录响应
     if (res.code === 200 && res.data.token) {
-      // 1. 修复：存储真实名称（接口返回的是 realName，不是 username）
+      // 存储真实名称（接口返回 realName）
       const userInfo = {
         userId: res.data.userInfo.userId,
         role: res.data.userInfo.role,
-        realName: res.data.userInfo.realName,  // 关键修复：字段是 realName！！！
+        realName: res.data.userInfo.realName,  
         token: res.data.token,
-        permissions: res.data.permissions || []  // 存储权限列表（可选）
+        permissions: res.data.permissions || []  // 存储权限列表
       }
 
-      // 2. 存储到 Pinia（原有逻辑保留）
+      // 2. 存储到 Pinia
       userStore.setUserInfo(userInfo)
 
-      // 3. 新增：存储到 localStorage（确保首页能读取）
+      // 3. 存储到 localStorage
       localStorage.setItem('userInfo', JSON.stringify(userInfo))
 
       ElMessage.success('登录成功')

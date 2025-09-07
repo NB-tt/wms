@@ -1,6 +1,6 @@
 <template>
   <div class="item-management-container">
-    <!-- 头部区域（新增返回按钮 + 优化布局） -->
+    <!-- 头部区域 -->
     <div class="page-header">
       <div class="header-left">
         <el-button 
@@ -13,12 +13,17 @@
         </el-button>
         <h2 class="page-title">物品管理</h2>
       </div>
-      <el-button type="primary" @click="handleAdd" class="add-button">
-        <el-icon><Plus /></el-icon> 新增物品
-      </el-button>
+      <div class="header-right">
+        <el-button type="primary" @click="handleAdd" class="add-button">
+          <el-icon><Plus /></el-icon> 新增物品
+        </el-button>
+        <el-button type="success" @click="showAddCategoryDialog" class="add-category-button">
+          <el-icon><FolderAdd /></el-icon> 新增分类
+        </el-button>
+      </div>
     </div>
 
-    <!-- 搜索区域（美化输入框样式） -->
+    <!-- 搜索区域 -->
     <el-card class="search-card">
       <el-input
         v-model="searchKeyword"
@@ -33,7 +38,7 @@
       </el-input>
     </el-card>
 
-    <!-- 表格区域（优化样式和交互） -->
+    <!-- 表格区域 -->
     <el-card class="table-card">
       <el-table 
         :data="itemList" 
@@ -95,7 +100,7 @@
         </el-table-column>
       </el-table>
 
-      <!-- 分页区域（美化样式） -->
+      <!-- 分页区域 -->
       <div class="pagination" v-if="total > 0">
         <el-pagination
           @size-change="handleSizeChange"
@@ -110,7 +115,7 @@
       </div>
     </el-card>
 
-    <!-- 新增/编辑弹窗（保持原有逻辑） -->
+    <!-- 新增/编辑物品弹窗 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
       <el-form ref="itemForm" :model="form" :rules="formRules" label-width="120px">
         <el-form-item label="名称" prop="name">
@@ -154,13 +159,80 @@
         <el-button type="primary" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 分类弹窗（含删除功能） -->
+    <el-dialog v-model="categoryDialogVisible" title="新增分类" width="800px">
+      <div class="category-dialog-content">
+       
+        <div class="existing-categories">
+          <h4>已有分类</h4>
+          <el-table 
+            :data="itemTypeList" 
+            height="300"
+            border
+            size="small"
+            :cell-style="{ padding: '8px' }"
+            @row-click="handleCategoryRowClick"
+          >
+            <el-table-column prop="typeName" label="分类名称" />
+            <el-table-column prop="sortNum" label="排序" width="80" align="center" />
+            <el-table-column label="操作" width="100" align="center">
+              <template #default="scope">
+                <el-button 
+                  type="danger" 
+                  size="small" 
+                  icon="Delete" 
+                  @click.stop="handleDeleteCategory(scope.row.typeId, scope.row.typeName)"
+                  class="category-delete-btn"
+                />
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        
+        <!-- 右侧：新增分类表单 -->
+        <div class="add-category-form">
+          <el-form ref="categoryForm" :model="categoryForm" :rules="categoryFormRules" label-width="100px">
+            <el-form-item label="分类名称" prop="typeName">
+              <el-input 
+                v-model="categoryForm.typeName" 
+                placeholder="请输入分类名称"
+                @input="checkCategoryExists"
+              />
+              <div v-if="categoryExists" class="error-tip">
+                <el-icon><Warning /></el-icon> 该分类已存在
+              </div>
+            </el-form-item>
+            <el-form-item label="排序序号" prop="sortNum">
+              <el-input-number 
+                v-model="categoryForm.sortNum" 
+                :min="0" 
+                :step="1" 
+                placeholder="请输入排序号"
+              />
+            </el-form-item>
+          </el-form>
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="categoryDialogVisible = false">取消</el-button>
+        <el-button 
+          type="primary" 
+          @click="handleAddCategory"
+          :disabled="categoryExists"
+        >
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, getCurrentInstance } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowLeft } from '@element-plus/icons-vue'  // 导入返回图标
+import { Plus, ArrowLeft, FolderAdd, Warning, Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 // 组件实例（用于访问ref）
@@ -186,6 +258,24 @@ const form = ref({
   minStock: 0,
   supplierId: null,
   location: ''
+})
+
+// 分类弹窗相关
+const categoryDialogVisible = ref(false)
+const categoryForm = ref({
+  typeName: '',
+  sortNum: null  // 初始为空，强制用户手动输入
+})
+const categoryExists = ref(false)
+const categoryFormRules = reactive({
+  typeName: [
+    { required: true, message: '分类名称不能为空', trigger: 'blur' },
+    { max: 20, message: '分类名称不能超过20个字符', trigger: 'blur' }
+  ],
+  sortNum: [
+    { required: true, message: '排序号不能为空', trigger: 'blur' },
+    { type: 'number', min: 0, message: '排序号不能为负数', trigger: 'change' }
+  ]
 })
 
 // 关联数据（分类、供应商）
@@ -218,11 +308,10 @@ onMounted(async () => {
 })
 
 /**
- * 返回首页（新增方法）
+ * 返回首页
  */
 const handleBack = () => {
-  window.location.href = '/home'  // 跳转到首页路由，根据实际路由调整
-  // 如果是SPA应用，使用路由跳转：this.$router.push('/home')
+  window.location.href = '/home'
 }
 
 /**
@@ -348,9 +437,7 @@ const handleSubmit = async () => {
   }
 }
 
-/**
- * 删除物品
- */
+ // 删除物品
 const handleDelete = async (id) => {
   try {
     await ElMessageBox.confirm('确定删除该物品？删除后不可恢复', '确认删除', {
@@ -363,6 +450,103 @@ const handleDelete = async (id) => {
     if (e !== 'cancel') ElMessage.error(`删除失败：${e.message}`)
   }
 }
+
+// 显示新增分类对话框
+const showAddCategoryDialog = () => {
+  categoryForm.value = {
+    typeName: '',
+    sortNum: null  // 排序号初始为空，强制手动输入
+  }
+  categoryExists.value = false
+  categoryDialogVisible.value = true
+  setTimeout(() => {
+    proxy.$refs.categoryForm?.clearValidate()
+    // 自动聚焦到分类名称输入框
+    const inputElement = document.querySelector('.add-category-form .el-input__inner')
+    inputElement?.focus()
+  }, 0)
+}
+
+  // 检查分类是否已存在
+const checkCategoryExists = () => {
+  // 强制触发视图更新
+  categoryForm.value = { ...categoryForm.value }
+  
+  const name = categoryForm.value.typeName.trim()
+  if (!name) {
+    categoryExists.value = false
+    return
+  }
+  categoryExists.value = itemTypeList.value.some(
+    item => item.typeName.toLowerCase() === name.toLowerCase()
+  )
+}
+
+// 新增分类
+const handleAddCategory = async () => {
+  if (categoryExists.value) return
+  
+  const valid = await proxy.$refs.categoryForm.validate()
+  if (!valid) return
+
+  try {
+    await request.post('/item-types', {
+      typeName: categoryForm.value.typeName,
+      sortNum: categoryForm.value.sortNum
+    })
+    ElMessage.success('分类添加成功')
+    categoryDialogVisible.value = false
+    await loadItemTypes() // 重新加载分类列表
+  } catch (e) {
+    ElMessage.error(`添加分类失败：${e.message}`)
+  }
+}
+
+// 删除分类
+const handleDeleteCategory = async (typeId, typeName) => {
+  try {
+    // 1. 确认删除
+    await ElMessageBox.confirm(
+      `确定删除分类【${typeName}】吗？删除前请确保该分类下没有物品关联`,
+      '危险操作',
+      {
+        type: 'danger',
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消'
+      }
+    )
+
+    // 2. 检查是否有关联物品
+    const res = await request.get('/items/count-by-type', {
+      params: { typeId }
+    })
+
+    if (res.data > 0) {
+      ElMessageBox.alert(
+        `无法删除【${typeName}】，该分类下仍有 ${res.data} 个物品，请先修改这些物品的分类或删除物品`,
+        '删除失败',
+        { type: 'error' }
+      )
+      return
+    }
+
+    // 3. 执行删除
+    await request.delete(`/item-types/${typeId}`)
+    ElMessage.success(`分类【${typeName}】已成功删除`)
+    
+    // 4. 刷新分类列表
+    await loadItemTypes()
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error(`删除失败：${e.message || '网络错误'}`)
+    }
+  }
+}
+
+// 防止表格行点击事件与删除按钮事件冲突
+const handleCategoryRowClick = () => {
+  // 空函数，用于接收表格行点击事件，避免冒泡影响
+}
 </script>
 
 <style scoped>
@@ -373,7 +557,7 @@ const handleDelete = async (id) => {
   min-height: calc(100vh - 60px); 
 }
 
-/* 头部样式（含返回按钮） */
+/* 头部样式 */
 .page-header { 
   display: flex; 
   justify-content: space-between; 
@@ -386,6 +570,11 @@ const handleDelete = async (id) => {
   display: flex; 
   align-items: center; 
   gap: 16px; 
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .back-button { 
   background-color: #f0f2f5; 
@@ -400,6 +589,16 @@ const handleDelete = async (id) => {
   margin: 0; 
   color: #1d2129; 
   font-size: 20px; 
+}
+
+/* 按钮样式 */
+.add-button {
+  background-color: #409eff;
+  border-color: #409eff;
+}
+.add-category-button {
+  background-color: #67c23a;
+  border-color: #67c23a;
 }
 
 /* 搜索框样式 */
@@ -440,7 +639,7 @@ const handleDelete = async (id) => {
   border-top: 1px solid #eee; 
 }
 
-/* 操作按钮样式优化 */
+/* 操作按钮样式*/
 .edit-btn { 
   margin-right: 8px; 
 }
@@ -452,6 +651,51 @@ const handleDelete = async (id) => {
   background-color: #f78989; 
 }
 
+/* 分类弹窗样式 */
+.category-dialog-content {
+  display: flex;
+  gap: 20px;
+}
+
+.existing-categories {
+  flex: 1;
+  border-right: 1px solid #eee;
+  padding-right: 20px;
+}
+
+.existing-categories h4 {
+  margin: 0 0 15px 0;
+  color: #666;
+}
+
+.add-category-form {
+  flex: 1;
+  padding-left: 20px;
+}
+
+.error-tip {
+  color: #f56c6c;
+  font-size: 12px;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+}
+
+.error-tip .el-icon {
+  margin-right: 5px;
+}
+
+/* 分类删除按钮样式 */
+.category-delete-btn {
+  color: #f56c6c;
+  background: transparent;
+  border: none;
+  padding: 4px;
+}
+.category-delete-btn:hover {
+  background-color: #fff1f0;
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
   .page-header { 
@@ -459,8 +703,22 @@ const handleDelete = async (id) => {
     align-items: flex-start; 
     gap: 12px; 
   }
-  .add-button { 
-    align-self: flex-end; 
+  .header-right {
+    align-self: flex-end;
+    margin-top: 12px;
+  }
+  .category-dialog-content {
+    flex-direction: column;
+  }
+  .existing-categories {
+    border-right: none;
+    border-bottom: 1px solid #eee;
+    padding-right: 0;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+  .add-category-form {
+    padding-left: 0;
   }
 }
 </style>

@@ -1,5 +1,4 @@
 // src/utils/encrypt.js
-// 导入crypto-js（确保已安装：npm install crypto-js）
 import CryptoJS from 'crypto-js'
 
 const md5Encrypt = (password) => {

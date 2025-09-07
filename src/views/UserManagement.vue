@@ -69,9 +69,9 @@
               <el-table-column label="操作" width="200">
                 <template #default="scope">
                   <el-button type="text" @click="handleEditUser(scope.row)">编辑</el-button>
-                  <el-button 
-                    type="text" 
-                    danger 
+                  <el-button
+                    type="text"
+                    danger
                     @click="handleDeleteUser(scope.row.userId)"
                     :disabled="scope.row.username === 'admin' || scope.row.roleName === '系统管理员'"
                   >
@@ -132,6 +132,7 @@
         </el-tabs>
       </div>
     </el-card>
+
     <!-- 用户表单对话框 -->
     <el-dialog
       v-model="userDialogVisible"
@@ -193,6 +194,7 @@
         <el-button type="primary" @click="handleUserSubmit">确定</el-button>
       </template>
     </el-dialog>
+
     <!-- 角色表单对话框 -->
     <el-dialog
       v-model="roleDialogVisible"
@@ -234,6 +236,7 @@
         <el-button type="primary" @click="handleRoleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
     <!-- 角色删除确认对话框 -->
     <el-dialog
       v-model="roleDeleteDialogVisible"
@@ -250,6 +253,7 @@
         <el-button type="primary" danger @click="confirmDeleteRole">确认删除</el-button>
       </template>
     </el-dialog>
+
     <!-- 权限分配对话框 -->
     <el-dialog
       v-model="permDialogVisible"
@@ -283,9 +287,9 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 // 标签页切换（用户管理/角色管理）
 const activeTab = ref('user') // 默认显示用户管理
 
-// 搜索表单
+// 搜索表单（前端显示用 username，后端实际参数为 keyword）
 const searchForm = ref({
-  username: '',
+  username: '', // 前端输入框绑定字段
   roleId: null
 })
 
@@ -307,7 +311,6 @@ const userForm = ref({
   status: 1,
   phone: ''
 })
-
 const userRules = ref({
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
@@ -325,12 +328,9 @@ const userRules = ref({
     }
   ]
 })
-
-// 编辑用户的密码规则（可选填，输入时校验长度）
 const editPasswordRules = ref([
   { min: 6, message: '密码至少6位', trigger: 'blur', required: false }
 ])
-
 const userFormRef = ref(null)
 
 // 角色表单相关
@@ -367,7 +367,7 @@ onMounted(async () => {
   ])
 })
 
-// 获取角色列表（新增：统计权限数量 + 标记系统角色）
+// 获取角色列表（统计权限数量 + 标记系统角色）
 const getRoleList = async () => {
   try {
     const res = await roleApi.list()
@@ -391,33 +391,53 @@ const getRoleList = async () => {
   }
 }
 
-// 获取用户列表
+// 获取用户列表（查询参数名改为 keyword + 过滤空值）
 const getUserList = async () => {
   try {
+    // 构建查询参数
     const params = {
       pageNum: pagination.currentPage,
       pageSize: pagination.pageSize,
-      username: searchForm.value.username.trim(),
-      roleId: searchForm.value.roleId ? Number(searchForm.value.roleId) : null
-    }
-    const res = await userApi.list(params)
-    if (res.code === 200 && res.data) {
+      // 用户名搜索字段名改为 keyword（与后端统一），非空才传递
+      ...(searchForm.value.username.trim() && { 
+        keyword: searchForm.value.username.trim() 
+      }),
+      // 角色ID仅在非空时传递（避免传递 null）
+      ...(searchForm.value.roleId !== null && searchForm.value.roleId !== undefined && { 
+        roleId: Number(searchForm.value.roleId) 
+      })
+    };
+
+    // 打印参数到控制台（验证用）
+    console.log('用户查询参数:', params);
+
+    // 发起请求
+    const res = await userApi.list(params);
+
+    // 处理响应
+    if (res.code === 200 && res.data && Array.isArray(res.data.records)) {
       userList.value = res.data.records.map(user => ({
         ...user,
-        userId: Number(user.userId),
-        roleId: user.roleId ? Number(user.roleId) : null
-      }))
-      pagination.total = res.data.total || 0
+        userId: Number(user.userId),          // ID转为数字
+        roleId: user.roleId ? Number(user.roleId) : null,
+        status: Number(user.status)           // 状态转为数字（1/0）
+      }));
+      pagination.total = Number(res.data.total) || 0;
     } else {
-      userList.value = []
-      pagination.total = 0
-      ElMessage.warning('获取用户列表失败')
+      userList.value = [];
+      pagination.total = 0;
+      ElMessage.warning(`获取用户列表失败：${res?.msg || '接口返回异常'}`);
     }
   } catch (error) {
-    console.error('获取用户失败:', error)
-    ElMessage.error('获取用户数据失败')
+    const errorMsg = error.response?.status 
+      ? `接口错误(${error.response.status})` 
+      : error.message || '网络错误';
+    console.error('用户查询失败:', errorMsg);
+    ElMessage.error(`获取用户数据失败：${errorMsg}`);
+    userList.value = [];
+    pagination.total = 0;
   }
-}
+};
 
 // 获取权限列表并构建树形结构
 const getPermissionList = async () => {
@@ -497,6 +517,7 @@ const handleUserSubmit = async () => {
     // 角色ID转为数字，处理空字符串电话
     submitData.roleId = Number(submitData.roleId)
     submitData.phone = submitData.phone.trim() || null
+
     const res = userDialogType.value === 'add'
       ? await userApi.add(submitData)
       : await userApi.update(submitData)
@@ -564,13 +585,11 @@ const handleRoleSubmit = async () => {
   }
   try {
     await roleFormRef.value.validate()
-    
     const roleData = {
       roleId: roleDialogType.value === 'edit' ? roleForm.value.roleId : null,
       roleName: roleForm.value.roleName.trim(),
       description: roleForm.value.description.trim()
     }
-
     let roleRes
     if (roleDialogType.value === 'add') {
       // 新增角色时需要检查权限选择
@@ -579,19 +598,16 @@ const handleRoleSubmit = async () => {
         ElMessage.warning('请至少选择一个权限')
         return
       }
-      
       roleRes = await roleApi.create(roleData)
       if (roleRes.code !== 200) {
         ElMessage.error(`新增角色失败: ${roleRes.msg || '未知错误'}`)
         return
       }
-      
       // 分配权限
       const permRes = await roleApi.assignPerms({
         roleId: roleRes.data.roleId,
         permIds: selectedPermIds.map(id => Number(id))
       })
-      
       if (permRes.code === 200) {
         ElMessage.success('新增角色及权限成功')
         roleDialogVisible.value = false
@@ -697,16 +713,13 @@ const handleStatusChange = async (row) => {
     ElMessage.warning('系统管理员状态不可修改');
     return;
   }
-
   const oldStatus = row.status
   const newStatus = oldStatus === 1 ? 0 : 1
-  
   try {
     const updateData = {
       userId: row.userId,
       status: newStatus
     };
-    
     const res = await userApi.updateStatus(updateData)
     if (res.code === 200) {
       row.status = newStatus
@@ -757,7 +770,6 @@ const handleSizeChange = (size) => {
   pagination.pageSize = size
   getUserList()
 }
-
 const handleCurrentChange = (page) => {
   pagination.currentPage = page
   getUserList()
@@ -771,59 +783,48 @@ const handleCurrentChange = (page) => {
   gap: 16px;
   margin-bottom: 20px;
 }
-
 .back-button {
   align-self: flex-start;
   margin-bottom: 8px;
 }
-
 .tabs-container {
   width: 100%;
 }
-
 .user-management {
   padding: 20px;
 }
-
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
-
 .search-form {
   margin-bottom: 20px;
 }
-
 .pagination {
   margin-top: 20px;
   text-align: right;
 }
-
 .perm-container {
   max-height: 300px;
   overflow-y: auto;
   padding-right: 10px;
   margin-top: 10px;
 }
-
 .el-tree {
   margin-top: 10px;
 }
-
 .error-tip {
   color: #ff4d4f;
   font-size: 12px;
   margin-top: 4px;
 }
-
 .hint-text {
   color: #909399;
   font-size: 12px;
   margin-top: 4px;
 }
-
 .delete-tip {
   color: #faad14;
   font-size: 13px;

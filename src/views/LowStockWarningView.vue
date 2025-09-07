@@ -1,6 +1,6 @@
 <template>
   <div class="low-stock-container">
-    <!-- 新增：返回首页按钮（左上角） -->
+    <!-- 返回首页按钮 -->
     <div class="back-container" style="margin-bottom: 20px;">
       <el-button 
         type="default" 
@@ -61,22 +61,22 @@
 </template>
 
 <script setup>
-// 仅新增返回首页相关代码，其余逻辑完全保留
+
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'  // 新增：导入返回图标
+import { ArrowLeft } from '@element-plus/icons-vue'  // 导入返回图标
 import { statisticsApi } from '@/api/statistics'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// 原有状态管理完全保留
+// 原有状态管理
 const lowStockItems = ref([])
 const lowStockCount = ref(0)
 const loading = ref(true)
 const searchKeyword = ref('')
 
-// 原有计算属性、方法完全保留
+
 const filteredItems = computed(() => {
   if (!Array.isArray(lowStockItems.value)) return []
   if (!searchKeyword.value) return lowStockItems.value
@@ -142,23 +142,23 @@ const handleStockIn = (item) => {
   })
 }
 
-// 新增：返回首页方法
+// 返回首页方法
 const goToHome = () => {
-  router.push('/home')  // 跳转到首页路由（请根据实际路由调整）
+  router.push('/home')  // 跳转到首页路由
 }
 </script>
 
 <style scoped>
-/* 仅新增返回按钮样式，原有样式完全保留 */
+
 .back-container {
-  margin-bottom: 20px;  /* 按钮与卡片间距 */
+  margin-bottom: 20px;  
 }
 
 .back-btn {
-  background-color: #e6f4ff;  /* 浅蓝背景，与入库/出库管理按钮统一 */
+  background-color: #e6f4ff;  
 }
 
-/* 原有样式完全保留 */
+
 .low-stock-container {
   padding: 20px;
   background: #f5f7fa;

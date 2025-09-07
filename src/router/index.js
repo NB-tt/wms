@@ -51,6 +51,19 @@ const routes = [
     component: () => import('@/views/LowStockWarningView.vue'),
     meta: { hasToken: true, requiresAuth: true, targetPerm: 'low_stock' }
   },
+   // 供应商管理
+  {
+    path: '/supplier',
+    name: 'SupplierManagement',
+    component: () => import('@/views/SupplierManagement.vue'), 
+    meta: { hasToken: true, requiresAuth: true, targetPerm: 'supplier_manage' } 
+  },
+  {
+    path: '/stock-in',
+    name: 'StockIn',
+    component: () => import('@/views/StockInView.vue'),
+    meta: { hasToken: true, requiresAuth: true, targetPerm: 'stock_in' }
+  },
   {
     path: '/user-management',
     name: 'UserManagement',
@@ -63,14 +76,14 @@ const routes = [
     component: () => import('@/views/ReportStatistics.vue'),
     meta: { hasToken: true, requiresAuth: true, targetPerm: 'report_statistics' }
   },
-  // 修正：盘点任务发起人（统一小写权限标识）
+  // 盘点任务发起人（统一小写权限标识）
   {
     path: '/stock-taking',
     name: 'Stocktaking',
     component: () => import('@/views/Stocktaking.vue'),
     meta: { hasToken: true, requiresAuth: true, targetPerm: 'stock_taking' }
   },
-  // 修正：盘点任务执行人（修复名称拼写+统一小写权限标识）
+  // 盘点任务执行人（名称拼写+统一小写权限标识）
   {
     path: '/executor-stocktaking',
     name: 'ExecutorStocktaking',

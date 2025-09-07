@@ -4,13 +4,12 @@
     <header class="page-header">
       <h1 class="page-title">办公用品仓库管理系统</h1>
       <div class="user-info">
-        <!-- 关键修改：使用 realName 字段 -->
         <span>欢迎回来，{{ currentUser.realName || '未知用户' }}</span>
         <button class="logout-btn" @click="handleLogout">退出</button>
       </div>
     </header>
 
-    <!-- 统计卡片区域（完全不变） -->
+    <!-- 统计卡片区域 -->
     <section class="stats-container">
       <div class="stats-grid">
         <div class="stat-item">
@@ -39,7 +38,7 @@
       </div>
     </section>
 
-    <!-- 功能入口卡片（完全不变） -->
+    <!-- 功能入口卡片 -->
     <section class="function-cards-container">
       <h2>功能入口</h2>
       <div class="function-cards">
@@ -49,6 +48,16 @@
             <div class="card-text">
               <h3>物品管理</h3>
               <p>管理办公用品的分类、信息和库存</p>
+            </div>
+          </div>
+        </el-card>
+
+        <el-card v-if="hasPerm('supplier_manage')" class="function-card" @click="$router.push('/supplier')">
+          <div class="card-content">
+            <el-icon :size="36"><Shop /></el-icon>
+            <div class="card-text">
+              <h3>供应商管理</h3>
+              <p>管理办公用品的供应商信息</p>
             </div>
           </div>
         </el-card>
@@ -133,13 +142,13 @@ import { useRouter } from 'vue-router'
 import { statisticsApi } from '@/api/statistics'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { hasPerm } from '@/utils/permission'
-import { Box, ArrowDown, ArrowUp, Warning, User } from '@element-plus/icons-vue'
+// 引入Shop图标（商店图标，用于供应商卡片）
+import { Box, ArrowDown, ArrowUp, Warning, User, Shop } from '@element-plus/icons-vue'
 
 const router = useRouter()
-// 存储当前用户信息（字段与接口保持一致：realName）
-const currentUser = ref({ realName: '' })  // 默认空对象，字段为 realName
+const currentUser = ref({ realName: '' })  // 当前用户信息
 
-// 统计数据变量（完全保留）
+// 统计数据变量
 const itemCount = ref('加载中...')
 const todayStockIn = ref('加载中...')
 const todayStockOut = ref('加载中...')
@@ -148,15 +157,11 @@ const lowStockCount = ref('加载中...')
 // 页面加载时获取用户信息和统计数据
 onMounted(async () => {
   try {
-    // 1. 从 localStorage 读取用户信息（登录时存储的是 res.data.userInfo）
+    // 1. 读取用户信息
     const storedUser = localStorage.getItem('userInfo')
-    if (storedUser) {
-      currentUser.value = JSON.parse(storedUser)  // 解析为 { realName: "张三", ... }
-    } else {
-      currentUser.value = { realName: '未知用户' }  // 兜底：字段为 realName
-    }
+    currentUser.value = storedUser ? JSON.parse(storedUser) : { realName: '未知用户' }
 
-    // 2. 获取统计数据（原有逻辑完全保留）
+    // 2. 获取统计数据
     const timestamp = new Date().getTime()
     const [itemTotalRes, todayInRes, todayOutRes, lowStockRes] = await Promise.all([
       statisticsApi.getItemTotal({ _t: timestamp }),
@@ -179,7 +184,7 @@ onMounted(async () => {
   }
 })
 
-// 数据提取函数（完全保留）
+// 数据提取函数
 const extractData = (response) => {
   if (typeof response === 'object' && response.data !== undefined) {
     return response.data.toString() || '0'
@@ -195,7 +200,7 @@ const extractData = (response) => {
   return response.toString() || '0'
 }
 
-// 退出登录（完全保留）
+// 退出登录
 const handleLogout = async () => {
   try {
     await ElMessageBox.confirm(
@@ -209,7 +214,7 @@ const handleLogout = async () => {
     )
 
     localStorage.removeItem('token')
-    localStorage.removeItem('userInfo')  // 清除存储的用户信息
+    localStorage.removeItem('userInfo')
     sessionStorage.removeItem('token')
     sessionStorage.removeItem('userInfo')
 
@@ -225,7 +230,7 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-/* 所有样式完全保留 */
+
 .home-container {
   padding: 20px;
   background-color: #f5f7fa;
