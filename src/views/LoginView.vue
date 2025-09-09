@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <div class="login-box">
-      <div class="login-title">系统登录</div>
+      <div class="login-title">办公用品仓库管理系统登录</div>
       <el-form
         ref="loginFormRef"
         :model="form"
