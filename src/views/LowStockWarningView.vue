@@ -1,50 +1,74 @@
 <template>
   <div class="low-stock-container">
-    <!-- 返回首页按钮 -->
-    <div class="back-container" style="margin-bottom: 20px;">
-      <el-button 
-        type="default" 
-        icon="ArrowLeft" 
-        @click="goToHome" 
-        class="back-btn"
-      >
-        返回首页
-      </el-button>
+    <!-- 头部区域 -->
+    <div class="page-header">
+      <div class="header-left">
+        <el-button
+          type="default"
+          icon="ArrowLeft"
+          @click="handleBack"
+          class="back-button"
+        >
+          返回首页
+        </el-button>
+        <h2 class="page-title">低库存预警</h2>
+      </div>
+      <div class="header-right">
+        <el-badge :value="lowStockCount" :max="99" class="badge" />
+      </div>
     </div>
 
-    <el-card class="main-card">
-      <template #header>
-        <div class="header-content">
-          <h2>低库存预警</h2>
-          <el-badge :value="lowStockCount" type="danger" v-if="lowStockCount > 0" />
-        </div>
-      </template>
+    <!-- 筛选选项卡 -->
+    <el-tabs v-model="activeTab" @tab-change="loadData">
+      <el-tab-pane label="当前预警" name="active" />
+      <el-tab-pane label="已忽略" name="ignored" />
+    </el-tabs>
 
-      <!-- 搜索框 -->
-      <el-input 
-        v-model="searchKeyword" 
-        placeholder="搜索物品名称/规格" 
-        prefix-icon="el-icon-search"
+    <!-- 搜索区域 -->
+    <el-card class="search-card" v-if="activeTab === 'active'">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="输入名称/规格搜索"
+        clearable
+        @keyup.enter="loadData"
         class="search-input"
-        @input="handleSearch"  
-      />
-
-      <!-- 低库存物品表格 -->
-      <el-table 
-        v-loading="loading" 
-        :data="filteredItems" 
-        border 
-        stripe 
-        style="width: 100%; margin-top: 20px"
-        empty-text="暂无低库存物品"  
       >
-        <el-table-column prop="itemId" label="物品ID" width="80" />
-        <el-table-column prop="name" label="物品名称" />
-        <el-table-column prop="specification" label="规格" />
-        <el-table-column prop="stockQuantity" label="当前库存" />
-        <el-table-column prop="minStock" label="最低库存阈值" />
-        <el-table-column prop="location" label="存放位置" />
-        <el-table-column label="操作" width="180">
+        <template #append>
+          <el-button type="primary" @click="loadData" class="search-btn">搜索</el-button>
+        </template>
+      </el-input>
+    </el-card>
+
+    <!-- 表格区域 -->
+    <el-card class="table-card">
+      <el-table
+        :data="activeTab === 'active' ? filteredItems : ignoredItems"
+        border
+        stripe
+        v-loading="loading"
+        :empty-text="loading ? '加载中...' : activeTab === 'active' ? '暂无低库存物品' : '暂无被忽略物品'"
+      >
+        <el-table-column prop="itemId" label="ID" width="80" align="center" />
+        <el-table-column prop="name" label="名称" width="180" />
+        <el-table-column prop="specification" label="规格" width="150" />
+        <el-table-column
+          prop="stockQuantity"
+          label="当前库存"
+          width="100"
+          align="center"
+          :cell-style="(row) => ({
+            color: row.row.stockQuantity <= (row.row.minStock || 1) ? 'red' : '',
+            'font-weight': row.row.stockQuantity <= (row.row.minStock || 1) ? 'bold' : ''
+          })"
+        />
+        <el-table-column
+          prop="minStock"
+          label="预警阈值"
+          width="100"
+          align="center"
+        />
+        <el-table-column prop="location" label="位置" width="150" />
+        <el-table-column label="操作" width="220" align="center">
           <template #default="scope">
             <el-button 
               type="primary" 
@@ -52,6 +76,22 @@
               @click="handleStockIn(scope.row)"
             >
               立即入库
+            </el-button>
+            <el-button 
+              v-if="activeTab === 'active'"
+              type="warning" 
+              size="small" 
+              @click="handleIgnore(scope.row.itemId)"
+            >
+              忽略预警
+            </el-button>
+            <el-button 
+              v-else
+              type="success" 
+              size="small" 
+              @click="handleRestore(scope.row.itemId)"
+            >
+              恢复预警
             </el-button>
           </template>
         </el-table-column>
@@ -61,24 +101,24 @@
 </template>
 
 <script setup>
-
-import { ref, onMounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'  // 导入返回图标
-import { statisticsApi } from '@/api/statistics'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
+import { statisticsApi } from '@/api/statistics'
+import { lowStockApi } from '@/api/lowStockApi'
 
 const router = useRouter()
 
-// 原有状态管理
+// 表格数据
+const activeTab = ref('active')
 const lowStockItems = ref([])
+const ignoredItems = ref([])
 const lowStockCount = ref(0)
-const loading = ref(true)
+const loading = ref(false)
 const searchKeyword = ref('')
 
-
+// 过滤后的数据
 const filteredItems = computed(() => {
-  if (!Array.isArray(lowStockItems.value)) return []
   if (!searchKeyword.value) return lowStockItems.value
   const keyword = searchKeyword.value.toLowerCase()
   return lowStockItems.value.filter(item => 
@@ -87,96 +127,171 @@ const filteredItems = computed(() => {
   )
 })
 
-const handleSearch = (() => {
-  let timer = null
-  return () => {
-    clearTimeout(timer)
-    timer = setTimeout(() => {}, 500)
-  }
-})()
-
-const fetchLowStockCount = async () => {
+// 加载数据
+const loadData = async () => {
+  loading.value = true
   try {
-    const res = await statisticsApi.getLowStockCount()
-    return res?.code === 200 ? res.data || 0 : 0
-  } catch (error) {
-    console.error('数量接口错误:', error)
-    return 0
-  }
-}
-
-const fetchLowStockItems = async () => {
-  try {
-    const res = await statisticsApi.getLowStockItems()
-    return res?.code === 200 && Array.isArray(res.data) ? res.data : []
-  } catch (error) {
-    console.error('列表接口错误:', error)
-    return []
-  }
-}
-
-onMounted(async () => {
-  try {
-    loading.value = true
-    const [count, items] = await Promise.all([
-      fetchLowStockCount(), 
-      fetchLowStockItems()
-    ])
-    lowStockCount.value = count
-    lowStockItems.value = items
-  } catch (error) {
-    ElMessage.error('数据加载异常')
+    if (activeTab.value === 'active') {
+      // 获取低库存物品列表
+      const itemsRes = await lowStockApi.getLowStockItems()
+      lowStockItems.value = itemsRes.data || []
+      
+      // 获取低库存数量
+      const countRes = await statisticsApi.getLowStockCount()
+      lowStockCount.value = countRes.data || 0
+    } else {
+      // 获取被忽略物品列表
+      const res = await lowStockApi.getIgnoredItems()
+      ignoredItems.value = res.data || []
+    }
+  } catch (e) {
+    ElMessage.error(`加载失败: ${e.message}`)
   } finally {
     loading.value = false
   }
-})
+}
 
+// 立即入库
 const handleStockIn = (item) => {
-  if (!item?.itemId) {
-    ElMessage.warning('物品信息异常')
-    return
-  }
   router.push({
     path: '/stock-in',
-    query: { itemId: item.itemId, itemName: item.name }
+    query: {
+      itemId: item.itemId,
+      itemName: item.name,
+      specification: item.specification
+    }
   })
 }
 
-// 返回首页方法
-const goToHome = () => {
-  router.push('/home')  // 跳转到首页路由
+// 忽略预警
+const handleIgnore = async (itemId) => {
+  try {
+    await ElMessageBox.confirm('确定忽略该物品的预警吗？', '确认操作', {
+      type: 'warning'
+    })
+    
+    const res = await lowStockApi.ignoreWarning(itemId)
+    
+    if (res.code === 200) {
+      ElMessage.success('已忽略该物品预警')
+      loadData() // 刷新列表
+    }
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error(`操作失败: ${e.message}`)
+    }
+  }
 }
+
+// 恢复预警
+const handleRestore = async (itemId) => {
+  try {
+    await ElMessageBox.confirm('确定恢复该物品的预警吗？', '确认操作', {
+      type: 'warning'
+    })
+    
+    // 假设恢复阈值为10，可以根据实际情况调整
+    const res = await lowStockApi.setWarningThreshold(itemId, 10)
+    
+    if (res.code === 200) {
+      ElMessage.success('已恢复该物品预警')
+      loadData() // 刷新列表
+    }
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error(`操作失败: ${e.message}`)
+    }
+  }
+}
+
+// 返回首页
+const handleBack = () => {
+  router.push('/home')
+}
+
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <style scoped>
-
-.back-container {
-  margin-bottom: 20px;  
-}
-
-.back-btn {
-  background-color: #e6f4ff;  
-}
-
-
 .low-stock-container {
   padding: 20px;
   background: #f5f7fa;
   min-height: calc(100vh - 60px);
 }
-.main-card {
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-}
-.header-content {
+
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
 }
-.search-input {
-  width: 300px;
-  margin-top: 10px;
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
-::v-deep .el-table__empty-text {
-  padding: 60px 0;
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.back-button {
+  background-color: #f0f2f5;
+  color: #409eff;
+  border: none;
+  padding: 6px 12px;
+}
+
+.back-button:hover {
+  background-color: #e6f4ff;
+}
+
+.page-title {
+  margin: 0;
+  color: #1d2129;
+  font-size: 20px;
+}
+
+.badge {
+  margin-left: 10px;
+}
+
+.search-card {
+  margin-bottom: 20px;
+}
+
+.table-card {
+  background: white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.el-table {
+  border-radius: 4px 4px 0 0;
+}
+
+.el-table__header th {
+  background-color: #f5f7fa !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .header-right {
+    align-self: flex-end;
+    margin-top: 12px;
+  }
 }
 </style>
